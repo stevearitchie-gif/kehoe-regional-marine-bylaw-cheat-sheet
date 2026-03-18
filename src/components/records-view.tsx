@@ -49,15 +49,14 @@ export function RecordsView({
 
   useEffect(() => {
     if (!isDialogOpen && pendingRecord) {
-      if (editingRecord) {
+      if (records.some(r => r.id === pendingRecord.id)) {
         onRecordUpdate(pendingRecord);
       } else {
         onRecordAdd(pendingRecord);
       }
       setPendingRecord(null);
-      setEditingRecord(null);
     }
-  }, [isDialogOpen, pendingRecord, editingRecord, onRecordAdd, onRecordUpdate]);
+  }, [isDialogOpen, pendingRecord, onRecordAdd, onRecordUpdate, records]);
 
 
   const handleAdd = () => {
