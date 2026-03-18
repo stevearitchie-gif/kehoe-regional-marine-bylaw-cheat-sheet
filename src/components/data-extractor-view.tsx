@@ -1,7 +1,7 @@
+
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -29,7 +29,6 @@ export function DataExtractorView() {
   const [isSheetOpen, setSheetOpen] = useState(false);
   const [extractedRecord, setExtractedRecord] = useState<Bylaw | null>(null);
   const { toast } = useToast();
-  const router = useRouter();
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
@@ -71,7 +70,6 @@ export function DataExtractorView() {
     setSheetOpen(false);
     setExtractedRecord(null);
     setFile(null);
-    router.refresh();
   };
   
   return (
