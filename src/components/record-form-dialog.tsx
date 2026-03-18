@@ -18,27 +18,25 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { bylawSchema } from '@/lib/schema';
 import type { Bylaw, BylawStatus, BylawData } from '@/lib/types';
-import { addBylawRecord, updateBylawRecord } from '@/app/actions';
-import { useToast } from '@/hooks/use-toast';
 import { useEffect } from 'react';
 
 type RecordFormDialogProps = {
   open: boolean;
   onClose: () => void;
-  onSave: (record: Bylaw) => void;
+  onSave: (data: BylawData, id?: string) => Promise<void>;
   record: Bylaw | Partial<BylawData> | null;
 };
 
 const statusOptions: BylawStatus[] = ['Verified', 'Needs review', 'Missing fields', 'Needs source link'];
 
 export function RecordFormDialog({ open, onClose, onSave, record }: RecordFormDialogProps) {
-  const { toast } = useToast();
   const form = useForm<Bylaw>({
     resolver: zodResolver(bylawSchema),
   });
-  const { reset } = form;
+  const { reset, formState: { isSubmitting } } = form;
 
   const isEditing = record && 'id' in record && record.id;
+  const recordId = isEditing ? record.id : undefined;
 
   useEffect(() => {
     if (open) {
@@ -68,17 +66,7 @@ export function RecordFormDialog({ open, onClose, onSave, record }: RecordFormDi
 
   const onSubmit = async (data: Bylaw) => {
     const { id, ...bylawData } = data;
-
-    const result = isEditing
-      ? await updateBylawRecord(id, bylawData)
-      : await addBylawRecord(bylawData);
-
-    if (result.success && result.record) {
-      toast({ title: 'Success', description: result.message });
-      onSave(result.record);
-    } else {
-      toast({ variant: 'destructive', title: 'Error', description: result.message });
-    }
+    await onSave(bylawData, recordId);
   };
 
   const fieldGroups = [
@@ -126,7 +114,9 @@ export function RecordFormDialog({ open, onClose, onSave, record }: RecordFormDi
         <DialogHeader>
           <DialogTitle>{isEditing ? 'Edit Record' : 'Add New Record'}</DialogTitle>
           <DialogDescription>
-            {isEditing ? `Editing the bylaw record for ${record.municipality}.` : 'Add a new bylaw record to the system.'}
+            {isEditing && record && 'municipality' in record
+              ? `Editing the bylaw record for ${record.municipality}.`
+              : 'Add a new bylaw record to the system.'}
           </DialogDescription>
         </DialogHeader>
         <form id="record-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-8 py-4 overflow-y-auto max-h-[60vh] pr-4">
@@ -164,8 +154,8 @@ export function RecordFormDialog({ open, onClose, onSave, record }: RecordFormDi
           <DialogClose asChild>
             <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
           </DialogClose>
-          <Button type="submit" form="record-form" disabled={form.formState.isSubmitting}>
-            {form.formState.isSubmitting ? 'Saving...' : 'Save Changes'}
+          <Button type="submit" form="record-form" disabled={isSubmitting}>
+            {isSubmitting ? 'Saving...' : 'Save Changes'}
           </Button>
         </DialogFooter>
       </DialogContent>
