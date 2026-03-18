@@ -27,7 +27,7 @@ export async function addBylawRecord(data: BylawData): Promise<{ success: boolea
       notes: data.notes ?? "",
     });
 
-    revalidatePath("/bylaws");
+    // revalidatePath("/bylaws");
     return { success: true, message: "Record added successfully." };
   } catch (error) {
     return { success: false, message: "Failed to add record." };
@@ -65,7 +65,7 @@ export async function getBylawRecords(): Promise<Bylaw[]> {
 export async function deleteBylawRecord(id: string): Promise<{ success: boolean; message: string }> {
   try {
     await deleteDoc(doc(db, "municipalities", id));
-    revalidatePath("/bylaws");
+    // revalidatePath("/bylaws");
     return { success: true, message: "Record deleted successfully." };
   } catch (error) {
     return { success: false, message: "Failed to delete record." };
@@ -96,7 +96,7 @@ export async function updateBylawRecord(
       notes: data.notes ?? "",
     });
 
-    revalidatePath("/bylaws");
+    // revalidatePath("/bylaws");
     return { success: true, message: "Record updated successfully." };
   } catch (error) {
     return { success: false, message: "Failed to update record." };
