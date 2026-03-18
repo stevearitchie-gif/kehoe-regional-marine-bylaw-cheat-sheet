@@ -21,18 +21,16 @@ import type { Bylaw, BylawStatus } from '@/lib/types';
 import { addBylawRecord, updateBylawRecord } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 import { useEffect } from 'react';
-import { ScrollArea } from './ui/scroll-area';
 
 type RecordFormDialogProps = {
   open: boolean;
-  onOpenChange: (open: boolean) => void;
+  onOpenChange: (open: boolean, success: boolean) => void;
   record: Bylaw | Partial<Bylaw> | null;
-  onSaveSuccess: (record: Bylaw) => void;
 };
 
 const statusOptions: BylawStatus[] = ['Verified', 'Needs review', 'Missing fields', 'Needs source link'];
 
-export function RecordFormDialog({ open, onOpenChange, record, onSaveSuccess }: RecordFormDialogProps) {
+export function RecordFormDialog({ open, onOpenChange, record }: RecordFormDialogProps) {
   const { toast } = useToast();
   const form = useForm<Bylaw>({
     resolver: zodResolver(bylawSchema),
@@ -92,9 +90,10 @@ export function RecordFormDialog({ open, onOpenChange, record, onSaveSuccess }: 
 
     if (result.success && result.record) {
       toast({ title: 'Success', description: result.message });
-      onSaveSuccess(result.record);
+      onOpenChange(false, true);
     } else {
       toast({ variant: 'destructive', title: 'Error', description: result.message });
+      onOpenChange(false, false);
     }
   };
 
@@ -138,7 +137,7 @@ export function RecordFormDialog({ open, onOpenChange, record, onSaveSuccess }: 
 
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={(isOpen) => onOpenChange(isOpen, false)}>
       <DialogContent className="sm:max-w-xl">
         <DialogHeader>
           <DialogTitle>{record && record.id ? 'Edit Record' : 'Add New Record'}</DialogTitle>
@@ -146,41 +145,37 @@ export function RecordFormDialog({ open, onOpenChange, record, onSaveSuccess }: 
             {record && record.id ? `Editing the bylaw record for ${record.municipality}.` : 'Add a new bylaw record to the system.'}
           </DialogDescription>
         </DialogHeader>
-        <div className="pr-4">
-        <ScrollArea className="max-h-[60vh] -mr-6 pr-6">
-          <form id="record-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-8 py-4">
-            {fieldGroups.map(group => (
-              <div key={group.title} className="space-y-4">
-                <h4 className="font-semibold text-lg">{group.title}</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {group.fields.map(fieldName => (
-                    <div key={fieldName} className={['municipality', 'region', 'conservationAuthority'].includes(fieldName) ? 'md:col-span-2' : ''}>
-                      <Label htmlFor={fieldName}>{fieldLabels[fieldName]}</Label>
-                      {fieldName === 'status' ? (
-                        <Select onValueChange={(value) => form.setValue(fieldName as keyof Bylaw, value)} defaultValue={form.getValues(fieldName as keyof Bylaw) as string}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select a status" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {statusOptions.map(option => <SelectItem key={option} value={option}>{option}</SelectItem>)}
-                          </SelectContent>
-                        </Select>
-                      ) : (
-                        <Input id={fieldName} type={fieldName === 'lastVerified' ? 'date' : 'text'} {...form.register(fieldName as keyof Bylaw)} />
-                      )}
-                      {form.formState.errors[fieldName as keyof Bylaw] && <p className="text-sm text-destructive mt-1">{form.formState.errors[fieldName as keyof Bylaw]?.message}</p>}
-                    </div>
-                  ))}
-                </div>
+        <form id="record-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-8 py-4 overflow-y-auto max-h-[60vh] pr-4">
+          {fieldGroups.map(group => (
+            <div key={group.title} className="space-y-4">
+              <h4 className="font-semibold text-lg">{group.title}</h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {group.fields.map(fieldName => (
+                  <div key={fieldName} className={['municipality', 'region', 'conservationAuthority'].includes(fieldName) ? 'md:col-span-2' : ''}>
+                    <Label htmlFor={fieldName}>{fieldLabels[fieldName]}</Label>
+                    {fieldName === 'status' ? (
+                      <Select onValueChange={(value) => form.setValue(fieldName as keyof Bylaw, value)} defaultValue={form.getValues(fieldName as keyof Bylaw) as string}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {statusOptions.map(option => <SelectItem key={option} value={option}>{option}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <Input id={fieldName} type={fieldName === 'lastVerified' ? 'date' : 'text'} {...form.register(fieldName as keyof Bylaw)} />
+                    )}
+                    {form.formState.errors[fieldName as keyof Bylaw] && <p className="text-sm text-destructive mt-1">{form.formState.errors[fieldName as keyof Bylaw]?.message}</p>}
+                  </div>
+                ))}
               </div>
-            ))}
-            <div className="space-y-2">
-              <Label htmlFor="notes">{fieldLabels['notes']}</Label>
-              <Textarea id="notes" {...form.register('notes')} rows={5} />
             </div>
-          </form>
-        </ScrollArea>
-        </div>
+          ))}
+          <div className="space-y-2">
+            <Label htmlFor="notes">{fieldLabels['notes']}</Label>
+            <Textarea id="notes" {...form.register('notes')} rows={5} />
+          </div>
+        </form>
         <DialogFooter>
           <DialogClose asChild>
             <Button type="button" variant="outline">Cancel</Button>
