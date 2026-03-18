@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState } from 'react';
@@ -68,11 +67,14 @@ export function DataExtractorView() {
     }
   };
 
-  const handleFormSuccess = () => {
-    setSheetOpen(false);
-    setExtractedRecord(null);
-    setFile(null);
-    router.push('/bylaws');
+  const handleFormSuccess = (success: boolean) => {
+    if (success) {
+      setSheetOpen(false);
+      setExtractedRecord(null);
+      setFile(null);
+      // Delay refresh to allow sheet to close and prevent race conditions.
+      setTimeout(() => router.refresh(), 100);
+    }
   };
   
   return (

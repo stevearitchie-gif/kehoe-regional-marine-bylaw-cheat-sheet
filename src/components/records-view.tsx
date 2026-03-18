@@ -1,8 +1,7 @@
-
 'use client';
 
 import { useState } from 'react';
-import { useRouter, usePathname } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import {
   Table,
   TableBody,
@@ -37,7 +36,6 @@ export function RecordsView({ records }: { records: Bylaw[] }) {
   const [isAlertOpen, setAlertOpen] = useState(false);
   const { toast } = useToast();
   const router = useRouter();
-  const pathname = usePathname();
 
   const handleAdd = () => {
     setEditingRecord(null);
@@ -62,17 +60,21 @@ export function RecordsView({ records }: { records: Bylaw[] }) {
     
     if (success) {
       toast({ title: 'Success', description: message });
-      router.push(pathname);
+      // Delay refresh to allow dialog to close and prevent race conditions.
+      setTimeout(() => router.refresh(), 100);
     } else {
       toast({ variant: 'destructive', title: 'Error', description: message });
     }
     setRecordToDelete(null);
   };
 
-  const handleFormSuccess = () => {
-    setSheetOpen(false);
-    setEditingRecord(null);
-    router.push(pathname);
+  const handleFormSuccess = (success: boolean) => {
+    if (success) {
+        setSheetOpen(false);
+        setEditingRecord(null);
+        // Delay refresh to allow sheet to close and prevent race conditions.
+        setTimeout(() => router.refresh(), 100);
+    }
   };
 
   return (

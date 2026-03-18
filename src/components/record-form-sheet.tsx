@@ -27,7 +27,7 @@ type RecordFormSheetProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   record: Bylaw | null;
-  onSuccess: () => void;
+  onSuccess: (success: boolean) => void;
 };
 
 const statusOptions: BylawStatus[] = ['Verified', 'Needs review', 'Missing fields', 'Needs source link'];
@@ -79,7 +79,7 @@ export function RecordFormSheet({ open, onOpenChange, record, onSuccess }: Recor
         notes: '',
       });
     }
-  }, [record, open]);
+  }, [record, open, form.reset]);
 
   const onSubmit = async (data: Bylaw) => {
     const dataToSend = { ...data };
@@ -92,9 +92,10 @@ export function RecordFormSheet({ open, onOpenChange, record, onSuccess }: Recor
 
     if (result.success) {
       toast({ title: 'Success', description: result.message });
-      onSuccess();
+      onSuccess(true);
     } else {
       toast({ variant: 'destructive', title: 'Error', description: result.message });
+      onSuccess(false);
     }
   };
 
