@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import {
   Table,
   TableBody,
@@ -45,20 +45,6 @@ export function RecordsView({
   const [isAlertOpen, setAlertOpen] = useState(false);
   const { toast } = useToast();
 
-  const [pendingRecord, setPendingRecord] = useState<Bylaw | null>(null);
-
-  useEffect(() => {
-    if (!isDialogOpen && pendingRecord) {
-      if (records.some(r => r.id === pendingRecord.id)) {
-        onRecordUpdate(pendingRecord);
-      } else {
-        onRecordAdd(pendingRecord);
-      }
-      setPendingRecord(null);
-    }
-  }, [isDialogOpen, pendingRecord, onRecordAdd, onRecordUpdate, records]);
-
-
   const handleAdd = () => {
     setEditingRecord(null);
     setDialogOpen(true);
@@ -89,17 +75,21 @@ export function RecordsView({
     setRecordToDelete(null);
   };
 
-  const handleDialogSaveSuccess = (savedRecord: Bylaw) => {
-    setPendingRecord(savedRecord);
-    setDialogOpen(false);
-  };
-
-  const handleDialogOpenChange = (open: boolean) => {
-    setDialogOpen(open);
-    if (!open) {
-      setEditingRecord(null);
+  const handleSave = (savedRecord: Bylaw) => {
+    if (editingRecord) {
+      onRecordUpdate(savedRecord);
+    } else {
+      onRecordAdd(savedRecord);
     }
-  };
+    setDialogOpen(false);
+    setEditingRecord(null);
+  }
+  
+  const handleClose = () => {
+    setDialogOpen(false);
+    setEditingRecord(null);
+  }
+
 
   return (
     <div className="space-y-4">
@@ -153,12 +143,14 @@ export function RecordsView({
           </TableBody>
         </Table>
       </div>
-      <RecordFormDialog
-        open={isDialogOpen}
-        onOpenChange={handleDialogOpenChange}
-        record={editingRecord}
-        onSaveSuccess={handleDialogSaveSuccess}
-      />
+      {isDialogOpen && (
+          <RecordFormDialog
+            open={isDialogOpen}
+            record={editingRecord}
+            onSave={handleSave}
+            onClose={handleClose}
+          />
+      )}
       <AlertDialog open={isAlertOpen} onOpenChange={setAlertOpen}>
         <AlertDialogContent>
             <AlertDialogHeader>

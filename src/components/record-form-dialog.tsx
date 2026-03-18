@@ -17,48 +17,32 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { bylawSchema } from '@/lib/schema';
-import type { Bylaw, BylawStatus } from '@/lib/types';
+import type { Bylaw, BylawStatus, BylawData } from '@/lib/types';
 import { addBylawRecord, updateBylawRecord } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 import { useEffect } from 'react';
 
 type RecordFormDialogProps = {
   open: boolean;
-  onOpenChange: (open: boolean, success: boolean) => void;
-  record: Bylaw | Partial<Bylaw> | null;
+  onClose: () => void;
+  onSave: (record: Bylaw) => void;
+  record: Bylaw | Partial<BylawData> | null;
 };
 
 const statusOptions: BylawStatus[] = ['Verified', 'Needs review', 'Missing fields', 'Needs source link'];
 
-export function RecordFormDialog({ open, onOpenChange, record }: RecordFormDialogProps) {
+export function RecordFormDialog({ open, onClose, onSave, record }: RecordFormDialogProps) {
   const { toast } = useToast();
   const form = useForm<Bylaw>({
     resolver: zodResolver(bylawSchema),
-    defaultValues: record ?? {
-      id: '',
-      municipality: '',
-      region: '',
-      contactName: '',
-      contactMethod: '',
-      conservationAuthority: '',
-      areaRegulation: '',
-      perimeterRegulation: '',
-      widthRegulation: '',
-      lengthRegulation: '',
-      sideLotSetback: '',
-      lotLineProjection: '',
-      heightLimit: '',
-      permitRequirements: '',
-      status: 'Needs review',
-      lastVerified: new Date().toISOString().split('T')[0],
-      notes: '',
-    },
   });
   const { reset } = form;
 
+  const isEditing = record && 'id' in record && record.id;
+
   useEffect(() => {
     if (open) {
-      reset(record ?? {
+      const defaultValues = {
         id: '',
         municipality: '',
         region: '',
@@ -76,24 +60,24 @@ export function RecordFormDialog({ open, onOpenChange, record }: RecordFormDialo
         status: 'Needs review',
         lastVerified: new Date().toISOString().split('T')[0],
         notes: '',
-      });
+        ...record,
+      } as Bylaw;
+      reset(defaultValues);
     }
   }, [record, open, reset]);
 
   const onSubmit = async (data: Bylaw) => {
-    const isEditing = record && record.id;
     const { id, ...bylawData } = data;
 
     const result = isEditing
-      ? await updateBylawRecord(record.id!, bylawData)
+      ? await updateBylawRecord(id, bylawData)
       : await addBylawRecord(bylawData);
 
     if (result.success && result.record) {
       toast({ title: 'Success', description: result.message });
-      onOpenChange(false, true);
+      onSave(result.record);
     } else {
       toast({ variant: 'destructive', title: 'Error', description: result.message });
-      onOpenChange(false, false);
     }
   };
 
@@ -137,12 +121,12 @@ export function RecordFormDialog({ open, onOpenChange, record }: RecordFormDialo
 
 
   return (
-    <Dialog open={open} onOpenChange={(isOpen) => onOpenChange(isOpen, false)}>
+    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
       <DialogContent className="sm:max-w-xl">
         <DialogHeader>
-          <DialogTitle>{record && record.id ? 'Edit Record' : 'Add New Record'}</DialogTitle>
+          <DialogTitle>{isEditing ? 'Edit Record' : 'Add New Record'}</DialogTitle>
           <DialogDescription>
-            {record && record.id ? `Editing the bylaw record for ${record.municipality}.` : 'Add a new bylaw record to the system.'}
+            {isEditing ? `Editing the bylaw record for ${record.municipality}.` : 'Add a new bylaw record to the system.'}
           </DialogDescription>
         </DialogHeader>
         <form id="record-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-8 py-4 overflow-y-auto max-h-[60vh] pr-4">
@@ -178,7 +162,7 @@ export function RecordFormDialog({ open, onOpenChange, record }: RecordFormDialo
         </form>
         <DialogFooter>
           <DialogClose asChild>
-            <Button type="button" variant="outline">Cancel</Button>
+            <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
           </DialogClose>
           <Button type="submit" form="record-form" disabled={form.formState.isSubmitting}>
             {form.formState.isSubmitting ? 'Saving...' : 'Save Changes'}
