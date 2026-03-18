@@ -1,7 +1,7 @@
-
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   Table,
   TableBody,
@@ -11,14 +11,13 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { getBylawRecords, deleteBylawRecord } from '@/app/actions';
+import { deleteBylawRecord } from '@/app/actions';
 import type { Bylaw } from '@/lib/types';
 import { RecordFormSheet } from './record-form-sheet';
 import { StatusBadge } from './status-badge';
 import { useToast } from '@/hooks/use-toast';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from './ui/dropdown-menu';
 import { MoreHorizontal, PlusCircle, Trash2, Edit } from 'lucide-react';
-import { Skeleton } from './ui/skeleton';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -31,20 +30,12 @@ import {
 } from "@/components/ui/alert-dialog"
 
 export function RecordsView({ initialRecords }: { initialRecords: Bylaw[] }) {
-  const [records, setRecords] = useState<Bylaw[]>(initialRecords);
-  const [loading, setLoading] = useState(false);
   const [isSheetOpen, setSheetOpen] = useState(false);
   const [editingRecord, setEditingRecord] = useState<Bylaw | null>(null);
   const [recordToDelete, setRecordToDelete] = useState<Bylaw | null>(null);
   const [isAlertOpen, setAlertOpen] = useState(false);
   const { toast } = useToast();
-
-  const fetchRecords = async () => {
-    setLoading(true);
-    const data = await getBylawRecords();
-    setRecords(data);
-    setLoading(false);
-  };
+  const router = useRouter();
 
   const handleAdd = () => {
     setEditingRecord(null);
@@ -64,25 +55,20 @@ export function RecordsView({ initialRecords }: { initialRecords: Bylaw[] }) {
   const confirmDelete = async () => {
     if (!recordToDelete) return;
     
-    setLoading(true);
     const { success, message } = await deleteBylawRecord(recordToDelete.id);
     if (success) {
       toast({ title: 'Success', description: message });
-      await fetchRecords();
+      router.refresh();
     } else {
       toast({ variant: 'destructive', title: 'Error', description: message });
-      setLoading(false);
     }
     setAlertOpen(false);
     setRecordToDelete(null);
   };
 
-  const handleSheetClose = async (updated?: boolean) => {
+  const handleSheetClose = () => {
     setSheetOpen(false);
     setEditingRecord(null);
-    if (updated) {
-      await fetchRecords();
-    }
   };
 
   return (
@@ -106,17 +92,7 @@ export function RecordsView({ initialRecords }: { initialRecords: Bylaw[] }) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {loading ? (
-                Array.from({ length: records.length || 3 }).map((_, i) => (
-                    <TableRow key={i}>
-                        <TableCell><Skeleton className="h-6 w-32" /></TableCell>
-                        <TableCell><Skeleton className="h-6 w-32" /></TableCell>
-                        <TableCell><Skeleton className="h-6 w-24" /></TableCell>
-                        <TableCell><Skeleton className="h-6 w-24" /></TableCell>
-                        <TableCell className="text-right"><Skeleton className="h-8 w-8 ml-auto" /></TableCell>
-                    </TableRow>
-                ))
-            ) : records.map((record) => (
+            {initialRecords.map((record) => (
               <TableRow key={record.id}>
                 <TableCell className="font-medium">{record.municipality}</TableCell>
                 <TableCell>{record.region}</TableCell>

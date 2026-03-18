@@ -1,4 +1,3 @@
-
 'use client';
 
 import {
@@ -23,18 +22,20 @@ import { addBylawRecord, updateBylawRecord } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 import { useEffect } from 'react';
 import { ScrollArea } from './ui/scroll-area';
+import { useRouter } from 'next/navigation';
 
 type RecordFormSheetProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   record: Bylaw | null;
-  onFormSubmit: (updated: boolean) => void;
+  onFormSubmit: () => void;
 };
 
 const statusOptions: BylawStatus[] = ['Verified', 'Needs review', 'Missing fields', 'Needs source link'];
 
 export function RecordFormSheet({ open, onOpenChange, record, onFormSubmit }: RecordFormSheetProps) {
   const { toast } = useToast();
+  const router = useRouter();
   const form = useForm<Bylaw>({
     resolver: zodResolver(bylawSchema),
     defaultValues: record || {
@@ -93,10 +94,11 @@ export function RecordFormSheet({ open, onOpenChange, record, onFormSubmit }: Re
 
     if (result.success) {
       toast({ title: 'Success', description: result.message });
-      onFormSubmit(true);
+      router.refresh();
+      onFormSubmit();
     } else {
       toast({ variant: 'destructive', title: 'Error', description: result.message });
-      onFormSubmit(false);
+      onFormSubmit();
     }
   };
 
