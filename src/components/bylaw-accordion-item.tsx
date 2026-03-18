@@ -23,6 +23,14 @@ const DetailItem = ({ icon: Icon, label, value }: { icon: React.ElementType, lab
 };
 
 export function BylawAccordionItem({ record }: BylawAccordionItemProps) {
+  let formattedDate: string | null = null;
+  if (record.lastVerified) {
+    const date = new Date(record.lastVerified);
+    if (!isNaN(date.getTime())) {
+      formattedDate = format(date, 'MMMM d, yyyy');
+    }
+  }
+  
   return (
     <AccordionItem value={record.id} className="bg-card border-b-0 rounded-lg shadow-sm overflow-hidden">
       <AccordionTrigger className="px-4 py-3 hover:no-underline text-left">
@@ -57,7 +65,7 @@ export function BylawAccordionItem({ record }: BylawAccordionItemProps) {
           <DetailItem 
             icon={User} 
             label="Last Verified" 
-            value={format(new Date(record.lastVerified), 'MMMM d, yyyy')}
+            value={formattedDate}
           />
         </div>
         {record.notes && (
