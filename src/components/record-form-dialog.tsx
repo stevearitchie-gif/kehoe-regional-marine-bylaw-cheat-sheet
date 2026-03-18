@@ -1,14 +1,14 @@
 'use client';
 
 import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetDescription,
-  SheetFooter,
-  SheetClose
-} from '@/components/ui/sheet';
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  DialogClose
+} from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -23,7 +23,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useEffect } from 'react';
 import { ScrollArea } from './ui/scroll-area';
 
-type RecordFormSheetProps = {
+type RecordFormDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   record: Bylaw | Partial<Bylaw> | null;
@@ -32,7 +32,7 @@ type RecordFormSheetProps = {
 
 const statusOptions: BylawStatus[] = ['Verified', 'Needs review', 'Missing fields', 'Needs source link'];
 
-export function RecordFormSheet({ open, onOpenChange, record, onSaveSuccess }: RecordFormSheetProps) {
+export function RecordFormDialog({ open, onOpenChange, record, onSaveSuccess }: RecordFormDialogProps) {
   const { toast } = useToast();
   const form = useForm<Bylaw>({
     resolver: zodResolver(bylawSchema),
@@ -56,10 +56,11 @@ export function RecordFormSheet({ open, onOpenChange, record, onSaveSuccess }: R
       notes: '',
     },
   });
+  const { reset } = form;
 
   useEffect(() => {
     if (open) {
-      form.reset(record ?? {
+      reset(record ?? {
         id: '',
         municipality: '',
         region: '',
@@ -79,7 +80,7 @@ export function RecordFormSheet({ open, onOpenChange, record, onSaveSuccess }: R
         notes: '',
       });
     }
-  }, [record, open, form.reset]);
+  }, [record, open, reset]);
 
   const onSubmit = async (data: Bylaw) => {
     const isEditing = record && record.id;
@@ -92,7 +93,6 @@ export function RecordFormSheet({ open, onOpenChange, record, onSaveSuccess }: R
     if (result.success && result.record) {
       toast({ title: 'Success', description: result.message });
       onSaveSuccess(result.record);
-      onOpenChange(false);
     } else {
       toast({ variant: 'destructive', title: 'Error', description: result.message });
     }
@@ -138,15 +138,16 @@ export function RecordFormSheet({ open, onOpenChange, record, onSaveSuccess }: R
 
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="sm:max-w-xl w-full flex flex-col">
-        <SheetHeader>
-          <SheetTitle>{record && record.id ? 'Edit Record' : 'Add New Record'}</SheetTitle>
-          <SheetDescription>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-xl">
+        <DialogHeader>
+          <DialogTitle>{record && record.id ? 'Edit Record' : 'Add New Record'}</DialogTitle>
+          <DialogDescription>
             {record && record.id ? `Editing the bylaw record for ${record.municipality}.` : 'Add a new bylaw record to the system.'}
-          </SheetDescription>
-        </SheetHeader>
-        <ScrollArea className="flex-grow pr-6 -mr-6">
+          </DialogDescription>
+        </DialogHeader>
+        <div className="pr-4">
+        <ScrollArea className="max-h-[60vh] -mr-6 pr-6">
           <form id="record-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-8 py-4">
             {fieldGroups.map(group => (
               <div key={group.title} className="space-y-4">
@@ -179,15 +180,16 @@ export function RecordFormSheet({ open, onOpenChange, record, onSaveSuccess }: R
             </div>
           </form>
         </ScrollArea>
-        <SheetFooter>
-          <SheetClose asChild>
+        </div>
+        <DialogFooter>
+          <DialogClose asChild>
             <Button type="button" variant="outline">Cancel</Button>
-          </SheetClose>
+          </DialogClose>
           <Button type="submit" form="record-form" disabled={form.formState.isSubmitting}>
             {form.formState.isSubmitting ? 'Saving...' : 'Save Changes'}
           </Button>
-        </SheetFooter>
-      </SheetContent>
-    </Sheet>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

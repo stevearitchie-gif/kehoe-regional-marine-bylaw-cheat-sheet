@@ -1,13 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { extractBylawData } from '@/ai/flows/bylaw-data-extraction-flow';
 import type { Bylaw } from '@/lib/types';
-import { RecordFormSheet } from './record-form-sheet';
+import { RecordFormDialog } from './record-form-dialog';
 import { Upload, Wand2 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 
@@ -25,9 +25,18 @@ const fileToDataUri = (file: File): Promise<string> => {
 export function DataExtractorView({ onRecordAdd }: { onRecordAdd: (record: Bylaw) => void }) {
   const [file, setFile] = useState<File | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [isSheetOpen, setSheetOpen] = useState(false);
+  const [isDialogOpen, setDialogOpen] = useState(false);
   const [extractedRecord, setExtractedRecord] = useState<Partial<Bylaw> | null>(null);
   const { toast } = useToast();
+
+  const [pendingRecord, setPendingRecord] = useState<Bylaw | null>(null);
+
+  useEffect(() => {
+    if (!isDialogOpen && pendingRecord) {
+      onRecordAdd(pendingRecord);
+      setPendingRecord(null);
+    }
+  }, [isDialogOpen, pendingRecord, onRecordAdd]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
@@ -54,7 +63,7 @@ export function DataExtractorView({ onRecordAdd }: { onRecordAdd: (record: Bylaw
       };
 
       setExtractedRecord(newRecord);
-      setSheetOpen(true);
+      setDialogOpen(true);
 
       toast({ title: 'Extraction Complete', description: 'Review the extracted data and save the new record.' });
     } catch (error) {
@@ -66,11 +75,12 @@ export function DataExtractorView({ onRecordAdd }: { onRecordAdd: (record: Bylaw
   };
 
   const handleSaveSuccess = (record: Bylaw) => {
-    onRecordAdd(record);
+    setPendingRecord(record);
+    setDialogOpen(false);
   };
 
-  const handleSheetOpenChange = (open: boolean) => {
-    setSheetOpen(open);
+  const handleDialogOpenChange = (open: boolean) => {
+    setDialogOpen(open);
     if (!open) {
       setExtractedRecord(null);
       setFile(null);
@@ -114,9 +124,9 @@ export function DataExtractorView({ onRecordAdd }: { onRecordAdd: (record: Bylaw
             {file && <p className="text-sm text-muted-foreground">Selected: {file.name}</p>}
         </div>
         
-        <RecordFormSheet
-            open={isSheetOpen}
-            onOpenChange={handleSheetOpenChange}
+        <RecordFormDialog
+            open={isDialogOpen}
+            onOpenChange={handleDialogOpenChange}
             record={extractedRecord}
             onSaveSuccess={handleSaveSuccess}
         />

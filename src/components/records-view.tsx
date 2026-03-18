@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Table,
   TableBody,
@@ -12,7 +12,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { deleteBylawRecord } from '@/app/actions';
 import type { Bylaw } from '@/lib/types';
-import { RecordFormSheet } from './record-form-sheet';
+import { RecordFormDialog } from './record-form-dialog';
 import { StatusBadge } from './status-badge';
 import { useToast } from '@/hooks/use-toast';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from './ui/dropdown-menu';
@@ -39,20 +39,35 @@ export function RecordsView({
   onRecordUpdate: (record: Bylaw) => void;
   onRecordDelete: (id: string) => void;
 }) {
-  const [isSheetOpen, setSheetOpen] = useState(false);
+  const [isDialogOpen, setDialogOpen] = useState(false);
   const [editingRecord, setEditingRecord] = useState<Bylaw | null>(null);
   const [recordToDelete, setRecordToDelete] = useState<Bylaw | null>(null);
   const [isAlertOpen, setAlertOpen] = useState(false);
   const { toast } = useToast();
 
+  const [pendingRecord, setPendingRecord] = useState<Bylaw | null>(null);
+
+  useEffect(() => {
+    if (!isDialogOpen && pendingRecord) {
+      if (editingRecord) {
+        onRecordUpdate(pendingRecord);
+      } else {
+        onRecordAdd(pendingRecord);
+      }
+      setPendingRecord(null);
+      setEditingRecord(null);
+    }
+  }, [isDialogOpen, pendingRecord, editingRecord, onRecordAdd, onRecordUpdate]);
+
+
   const handleAdd = () => {
     setEditingRecord(null);
-    setSheetOpen(true);
+    setDialogOpen(true);
   };
 
   const handleEdit = (record: Bylaw) => {
     setEditingRecord(record);
-    setSheetOpen(true);
+    setDialogOpen(true);
   };
   
   const handleDelete = (record: Bylaw) => {
@@ -75,18 +90,15 @@ export function RecordsView({
     setRecordToDelete(null);
   };
 
-  const handleSheetOpenChange = (open: boolean) => {
-    setSheetOpen(open);
-    if (!open) {
-      setEditingRecord(null);
-    }
+  const handleDialogSaveSuccess = (savedRecord: Bylaw) => {
+    setPendingRecord(savedRecord);
+    setDialogOpen(false);
   };
 
-  const handleSaveSuccess = (savedRecord: Bylaw) => {
-    if (editingRecord) {
-      onRecordUpdate(savedRecord);
-    } else {
-      onRecordAdd(savedRecord);
+  const handleDialogOpenChange = (open: boolean) => {
+    setDialogOpen(open);
+    if (!open) {
+      setEditingRecord(null);
     }
   };
 
@@ -142,11 +154,11 @@ export function RecordsView({
           </TableBody>
         </Table>
       </div>
-      <RecordFormSheet
-        open={isSheetOpen}
-        onOpenChange={handleSheetOpenChange}
+      <RecordFormDialog
+        open={isDialogOpen}
+        onOpenChange={handleDialogOpenChange}
         record={editingRecord}
-        onSaveSuccess={handleSaveSuccess}
+        onSaveSuccess={handleDialogSaveSuccess}
       />
       <AlertDialog open={isAlertOpen} onOpenChange={setAlertOpen}>
         <AlertDialogContent>
