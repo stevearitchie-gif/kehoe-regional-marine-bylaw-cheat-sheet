@@ -2,6 +2,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter, usePathname } from 'next/navigation';
 import {
   Table,
   TableBody,
@@ -35,6 +36,8 @@ export function RecordsView({ records }: { records: Bylaw[] }) {
   const [recordToDelete, setRecordToDelete] = useState<Bylaw | null>(null);
   const [isAlertOpen, setAlertOpen] = useState(false);
   const { toast } = useToast();
+  const router = useRouter();
+  const pathname = usePathname();
 
   const handleAdd = () => {
     setEditingRecord(null);
@@ -53,20 +56,23 @@ export function RecordsView({ records }: { records: Bylaw[] }) {
 
   const confirmDelete = async () => {
     if (!recordToDelete) return;
-    
+
+    setAlertOpen(false);
     const { success, message } = await deleteBylawRecord(recordToDelete.id);
+    
     if (success) {
       toast({ title: 'Success', description: message });
+      router.push(pathname);
     } else {
       toast({ variant: 'destructive', title: 'Error', description: message });
     }
-    setAlertOpen(false);
     setRecordToDelete(null);
   };
 
   const handleFormSuccess = () => {
     setSheetOpen(false);
     setEditingRecord(null);
+    router.push(pathname);
   };
 
   return (
