@@ -1,35 +1,21 @@
 
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Accordion } from '@/components/ui/accordion';
-import { getBylawRecords } from '@/app/actions';
 import type { Bylaw } from '@/lib/types';
 import { BylawAccordionItem } from './bylaw-accordion-item';
 import { Search, MapPin, Building } from 'lucide-react';
-import { Skeleton } from './ui/skeleton';
 
-export function FieldView() {
-  const [records, setRecords] = useState<Bylaw[]>([]);
-  const [loading, setLoading] = useState(true);
+export function FieldView({ records }: { records: Bylaw[] }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [regionFilter, setRegionFilter] = useState('all');
   const [authorityFilter, setAuthorityFilter] = useState('all');
 
-  useEffect(() => {
-    async function fetchRecords() {
-      setLoading(true);
-      const data = await getBylawRecords();
-      setRecords(data);
-      setLoading(false);
-    }
-    fetchRecords();
-  }, []);
-
-  const regions = useMemo(() => [...new Set(records.map((r) => r.region))], [records]);
-  const authorities = useMemo(() => [...new Set(records.map((r) => r.conservationAuthority))], [records]);
+  const regions = useMemo(() => [...new Set(records.map((r) => r.region).filter(Boolean))].sort(), [records]);
+  const authorities = useMemo(() => [...new Set(records.map((r) => r.conservationAuthority).filter(Boolean))].sort(), [records]);
 
   const filteredRecords = useMemo(() => {
     return records.filter((record) => {
@@ -94,13 +80,7 @@ export function FieldView() {
         </div>
       </div>
       
-      {loading ? (
-        <div className="space-y-4">
-            <Skeleton className="h-16 w-full" />
-            <Skeleton className="h-16 w-full" />
-            <Skeleton className="h-16 w-full" />
-        </div>
-      ) : filteredRecords.length > 0 ? (
+      {filteredRecords.length > 0 ? (
         <Accordion type="single" collapsible className="w-full space-y-2">
           {filteredRecords.map((record) => (
             <BylawAccordionItem key={record.id} record={record} />

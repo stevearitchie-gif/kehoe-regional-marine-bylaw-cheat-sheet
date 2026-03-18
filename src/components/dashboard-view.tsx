@@ -1,12 +1,9 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { getBylawRecords } from '@/app/actions';
 import type { Bylaw } from '@/lib/types';
-import { Building, Map, CheckCircle, AlertTriangle, Users } from 'lucide-react';
-import { Skeleton } from './ui/skeleton';
+import { Building, Map, CheckCircle, AlertTriangle } from 'lucide-react';
 
 const StatCard = ({ title, value, icon: Icon, color }: { title: string, value: string | number, icon: React.ElementType, color: string }) => (
     <Card>
@@ -20,35 +17,11 @@ const StatCard = ({ title, value, icon: Icon, color }: { title: string, value: s
     </Card>
 );
 
-export function DashboardView() {
-  const [records, setRecords] = useState<Bylaw[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    async function fetchRecords() {
-      setLoading(true);
-      const data = await getBylawRecords();
-      setRecords(data);
-      setLoading(false);
-    }
-    fetchRecords();
-  }, []);
-
+export function DashboardView({ records }: { records: Bylaw[] }) {
   const totalMunicipalities = records.length;
   const totalRegions = new Set(records.map((r) => r.region)).size;
   const verifiedRecords = records.filter((r) => r.status === 'Verified').length;
   const needsAttention = totalMunicipalities - verifiedRecords;
-
-  if (loading) {
-    return (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            <Skeleton className="h-[126px]" />
-            <Skeleton className="h-[126px]" />
-            <Skeleton className="h-[126px]" />
-            <Skeleton className="h-[126px]" />
-        </div>
-    );
-  }
 
   return (
     <div className="space-y-4">

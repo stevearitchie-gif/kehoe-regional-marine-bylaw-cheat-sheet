@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import {
   Table,
   TableBody,
@@ -30,9 +30,9 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 
-export function RecordsView() {
-  const [records, setRecords] = useState<Bylaw[]>([]);
-  const [loading, setLoading] = useState(true);
+export function RecordsView({ initialRecords }: { initialRecords: Bylaw[] }) {
+  const [records, setRecords] = useState<Bylaw[]>(initialRecords);
+  const [loading, setLoading] = useState(false);
   const [isSheetOpen, setSheetOpen] = useState(false);
   const [editingRecord, setEditingRecord] = useState<Bylaw | null>(null);
   const [recordToDelete, setRecordToDelete] = useState<Bylaw | null>(null);
@@ -45,10 +45,6 @@ export function RecordsView() {
     setRecords(data);
     setLoading(false);
   };
-
-  useEffect(() => {
-    fetchRecords();
-  }, []);
 
   const handleAdd = () => {
     setEditingRecord(null);
@@ -67,12 +63,15 @@ export function RecordsView() {
 
   const confirmDelete = async () => {
     if (!recordToDelete) return;
+    
+    setLoading(true);
     const { success, message } = await deleteBylawRecord(recordToDelete.id);
     if (success) {
       toast({ title: 'Success', description: message });
       await fetchRecords();
     } else {
       toast({ variant: 'destructive', title: 'Error', description: message });
+      setLoading(false);
     }
     setAlertOpen(false);
     setRecordToDelete(null);
@@ -108,7 +107,7 @@ export function RecordsView() {
           </TableHeader>
           <TableBody>
             {loading ? (
-                Array.from({ length: 3 }).map((_, i) => (
+                Array.from({ length: records.length || 3 }).map((_, i) => (
                     <TableRow key={i}>
                         <TableCell><Skeleton className="h-6 w-32" /></TableCell>
                         <TableCell><Skeleton className="h-6 w-32" /></TableCell>

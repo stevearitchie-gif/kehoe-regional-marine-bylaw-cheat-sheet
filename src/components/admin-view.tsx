@@ -4,8 +4,9 @@ import { DashboardView } from '@/components/dashboard-view';
 import { RecordsView } from '@/components/records-view';
 import { DataExtractorView } from '@/components/data-extractor-view';
 import { LayoutDashboard, List, Wand2 } from 'lucide-react';
+import type { Bylaw } from '@/lib/types';
 
-export function AdminView() {
+export function AdminView({ records }: { records: Bylaw[] }) {
   return (
     <Tabs defaultValue="dashboard" className="flex flex-col h-full">
       <TabsList className="mb-4">
@@ -23,10 +24,10 @@ export function AdminView() {
         </TabsTrigger>
       </TabsList>
       <TabsContent value="dashboard" className="flex-grow">
-        <DashboardView />
+        <DashboardView records={records} />
       </TabsContent>
       <TabsContent value="records" className="flex-grow">
-        <RecordsView />
+        <RecordsView initialRecords={records} />
       </TabsContent>
       <TabsContent value="extractor" className="flex-grow">
         <DataExtractorView />

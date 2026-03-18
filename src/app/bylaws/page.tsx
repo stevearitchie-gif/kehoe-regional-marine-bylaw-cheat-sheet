@@ -3,8 +3,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { FieldView } from '@/components/field-view';
 import { AdminView } from '@/components/admin-view';
 import { Building, Users } from 'lucide-react';
+import { getBylawRecords } from '@/app/actions';
+import type { Bylaw } from '@/lib/types';
 
-export default function BylawsPage() {
+export default async function BylawsPage() {
+  const records: Bylaw[] = await getBylawRecords();
+
   return (
     <div className="flex-grow flex flex-col">
       <header className="bg-background/80 backdrop-blur-sm sticky top-0 z-40 border-b">
@@ -33,10 +37,10 @@ export default function BylawsPage() {
             </TabsTrigger>
           </TabsList>
           <TabsContent value="field" className="flex-grow">
-            <FieldView />
+            <FieldView records={records} />
           </TabsContent>
           <TabsContent value="admin" className="flex-grow">
-            <AdminView />
+            <AdminView records={records} />
           </TabsContent>
         </Tabs>
       </main>
