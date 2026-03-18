@@ -62,9 +62,9 @@ export function RecordsView({
 
   const confirmDelete = async () => {
     if (!recordToDelete) return;
-
-    const result = await deleteBylawRecord(recordToDelete.id);
+    
     setAlertOpen(false);
+    const result = await deleteBylawRecord(recordToDelete.id);
 
     if (result.success) {
       toast({ title: 'Success', description: result.message });
