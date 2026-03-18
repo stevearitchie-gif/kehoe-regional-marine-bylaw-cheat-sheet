@@ -1,6 +1,5 @@
 'use client';
 
-import { useState } from 'react';
 import {
   Table,
   TableBody,
@@ -10,11 +9,9 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { deleteBylawRecord } from '@/app/actions';
 import type { Bylaw } from '@/lib/types';
 import { RecordFormDialog } from './record-form-dialog';
 import { StatusBadge } from './status-badge';
-import { useToast } from '@/hooks/use-toast';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from './ui/dropdown-menu';
 import { MoreHorizontal, PlusCircle, Trash2, Edit } from 'lucide-react';
 import {
@@ -28,74 +25,42 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 
+type RecordsViewProps = {
+  records: Bylaw[];
+  onSave: (record: Bylaw) => void;
+  isDialogOpen: boolean;
+  editingRecord: Bylaw | null;
+  onOpenAddDialog: () => void;
+  onOpenEditDialog: (record: Bylaw) => void;
+  onCloseDialog: () => void;
+  isAlertOpen: boolean;
+  recordToDelete: Bylaw | null;
+  onOpenDeleteAlert: (record: Bylaw) => void;
+  onCloseDeleteAlert: () => void;
+  onConfirmDelete: () => Promise<void>;
+};
+
+
 export function RecordsView({
   records,
-  onRecordAdd,
-  onRecordUpdate,
-  onRecordDelete,
-}: {
-  records: Bylaw[];
-  onRecordAdd: (record: Bylaw) => void;
-  onRecordUpdate: (record: Bylaw) => void;
-  onRecordDelete: (id: string) => void;
-}) {
-  const [isDialogOpen, setDialogOpen] = useState(false);
-  const [editingRecord, setEditingRecord] = useState<Bylaw | null>(null);
-  const [recordToDelete, setRecordToDelete] = useState<Bylaw | null>(null);
-  const [isAlertOpen, setAlertOpen] = useState(false);
-  const { toast } = useToast();
-
-  const handleAdd = () => {
-    setEditingRecord(null);
-    setDialogOpen(true);
-  };
-
-  const handleEdit = (record: Bylaw) => {
-    setEditingRecord(record);
-    setDialogOpen(true);
-  };
-  
-  const handleDelete = (record: Bylaw) => {
-    setRecordToDelete(record);
-    setAlertOpen(true);
-  }
-
-  const confirmDelete = async () => {
-    if (!recordToDelete) return;
-    
-    setAlertOpen(false);
-    const result = await deleteBylawRecord(recordToDelete.id);
-
-    if (result.success) {
-      toast({ title: 'Success', description: result.message });
-      onRecordDelete(recordToDelete.id);
-    } else {
-      toast({ variant: 'destructive', title: 'Error', description: result.message });
-    }
-    setRecordToDelete(null);
-  };
-
-  const handleSave = (savedRecord: Bylaw) => {
-    if (editingRecord) {
-      onRecordUpdate(savedRecord);
-    } else {
-      onRecordAdd(savedRecord);
-    }
-    setDialogOpen(false);
-    setEditingRecord(null);
-  }
-  
-  const handleClose = () => {
-    setDialogOpen(false);
-    setEditingRecord(null);
-  }
-
+  onSave,
+  isDialogOpen,
+  editingRecord,
+  onOpenAddDialog,
+  onOpenEditDialog,
+  onCloseDialog,
+  isAlertOpen,
+  recordToDelete,
+  onOpenDeleteAlert,
+  onCloseDeleteAlert,
+  onConfirmDelete,
+}: RecordsViewProps) {
 
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold tracking-tight">Manage Records</h2>
-        <Button onClick={handleAdd}>
+        <Button onClick={onOpenAddDialog}>
           <PlusCircle className="mr-2 h-4 w-4" />
           Add Record
         </Button>
@@ -129,10 +94,10 @@ export function RecordsView({
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => handleEdit(record)}>
+                      <DropdownMenuItem onClick={() => onOpenEditDialog(record)}>
                         <Edit className="mr-2 h-4 w-4" /> Edit
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleDelete(record)} className="text-destructive focus:text-destructive">
+                      <DropdownMenuItem onClick={() => onOpenDeleteAlert(record)} className="text-destructive focus:text-destructive">
                         <Trash2 className="mr-2 h-4 w-4" /> Delete
                       </DropdownMenuItem>
                     </DropdownMenuContent>
@@ -147,11 +112,11 @@ export function RecordsView({
           <RecordFormDialog
             open={isDialogOpen}
             record={editingRecord}
-            onSave={handleSave}
-            onClose={handleClose}
+            onSave={onSave}
+            onClose={onCloseDialog}
           />
       )}
-      <AlertDialog open={isAlertOpen} onOpenChange={setAlertOpen}>
+      <AlertDialog open={isAlertOpen} onOpenChange={(isOpen) => !isOpen && onCloseDeleteAlert()}>
         <AlertDialogContent>
             <AlertDialogHeader>
                 <AlertDialogTitle>Are you sure you want to delete this record?</AlertDialogTitle>
@@ -160,8 +125,8 @@ export function RecordsView({
                 </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={confirmDelete} className="bg-destructive hover:bg-destructive/90">Delete</AlertDialogAction>
+                <AlertDialogCancel onClick={onCloseDeleteAlert}>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={onConfirmDelete} className="bg-destructive hover:bg-destructive/90">Delete</AlertDialogAction>
             </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

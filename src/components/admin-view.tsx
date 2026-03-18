@@ -8,11 +8,34 @@ import type { Bylaw } from '@/lib/types';
 type AdminViewProps = {
   records: Bylaw[];
   onRecordAdd: (record: Bylaw) => void;
-  onRecordUpdate: (record: Bylaw) => void;
-  onRecordDelete: (id: string) => void;
+  onSaveFromDialog: (record: Bylaw) => void;
+  isDialogOpen: boolean;
+  editingRecord: Bylaw | null;
+  onOpenAddDialog: () => void;
+  onOpenEditDialog: (record: Bylaw) => void;
+  onCloseDialog: () => void;
+  isAlertOpen: boolean;
+  recordToDelete: Bylaw | null;
+  onOpenDeleteAlert: (record: Bylaw) => void;
+  onCloseDeleteAlert: () => void;
+  onConfirmDelete: () => Promise<void>;
 };
 
-export function AdminView({ records, onRecordAdd, onRecordUpdate, onRecordDelete }: AdminViewProps) {
+export function AdminView({ 
+  records, 
+  onRecordAdd, 
+  onSaveFromDialog,
+  isDialogOpen,
+  editingRecord,
+  onOpenAddDialog,
+  onOpenEditDialog,
+  onCloseDialog,
+  isAlertOpen,
+  recordToDelete,
+  onOpenDeleteAlert,
+  onCloseDeleteAlert,
+  onConfirmDelete,
+}: AdminViewProps) {
   return (
     <Tabs defaultValue="dashboard" className="flex flex-col h-full">
       <TabsList className="mb-4">
@@ -35,9 +58,17 @@ export function AdminView({ records, onRecordAdd, onRecordUpdate, onRecordDelete
       <TabsContent value="records" className="flex-grow">
         <RecordsView 
           records={records}
-          onRecordAdd={onRecordAdd}
-          onRecordUpdate={onRecordUpdate}
-          onRecordDelete={onRecordDelete}
+          onSave={onSaveFromDialog}
+          isDialogOpen={isDialogOpen}
+          editingRecord={editingRecord}
+          onOpenAddDialog={onOpenAddDialog}
+          onOpenEditDialog={onOpenEditDialog}
+          onCloseDialog={onCloseDialog}
+          isAlertOpen={isAlertOpen}
+          recordToDelete={recordToDelete}
+          onOpenDeleteAlert={onOpenDeleteAlert}
+          onCloseDeleteAlert={onCloseDeleteAlert}
+          onConfirmDelete={onConfirmDelete}
         />
       </TabsContent>
       <TabsContent value="extractor" className="flex-grow">
