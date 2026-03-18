@@ -6,6 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { FieldView } from '@/components/field-view';
 import { AdminView } from '@/components/admin-view';
 import { Building, Users } from 'lucide-react';
+import { getBylawRecords } from '@/app/actions';
 
 type BylawManagerProps = {
   initialRecords: Bylaw[];
@@ -14,18 +15,21 @@ type BylawManagerProps = {
 export function BylawManager({ initialRecords }: BylawManagerProps) {
   const [records, setRecords] = useState<Bylaw[]>(initialRecords);
 
+  const refreshBylawRecords = async () => {
+    const freshRecords = await getBylawRecords();
+    setRecords(freshRecords);
+  };
+
   const handleRecordAdd = (newRecord: Bylaw) => {
-    setRecords((prevRecords) => [newRecord, ...prevRecords].sort((a, b) => a.municipality.localeCompare(b.municipality)));
+    refreshBylawRecords();
   };
 
   const handleRecordUpdate = (updatedRecord: Bylaw) => {
-    setRecords((prevRecords) =>
-      prevRecords.map((r) => (r.id === updatedRecord.id ? updatedRecord : r)).sort((a, b) => a.municipality.localeCompare(b.municipality))
-    );
+    refreshBylawRecords();
   };
 
   const handleRecordDelete = (deletedRecordId: string) => {
-    setRecords((prevRecords) => prevRecords.filter((r) => r.id !== deletedRecordId));
+    refreshBylawRecords();
   };
 
   return (
