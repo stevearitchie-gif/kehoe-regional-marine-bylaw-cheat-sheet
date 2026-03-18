@@ -66,9 +66,10 @@ export function RecordsView({ initialRecords }: { initialRecords: Bylaw[] }) {
     setRecordToDelete(null);
   };
 
-  const handleSheetClose = () => {
+  const handleFormSuccess = () => {
     setSheetOpen(false);
     setEditingRecord(null);
+    router.refresh();
   };
 
   return (
@@ -127,7 +128,7 @@ export function RecordsView({ initialRecords }: { initialRecords: Bylaw[] }) {
         open={isSheetOpen}
         onOpenChange={setSheetOpen}
         record={editingRecord}
-        onFormSubmit={handleSheetClose}
+        onSuccess={handleFormSuccess}
       />
       <AlertDialog open={isAlertOpen} onOpenChange={setAlertOpen}>
         <AlertDialogContent>
