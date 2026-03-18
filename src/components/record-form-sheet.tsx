@@ -81,7 +81,7 @@ export function RecordFormSheet({ open, onOpenChange, record, onFormSubmit }: Re
         notes: '',
       });
     }
-  }, [record, open, form]);
+  }, [record, open]);
 
   const onSubmit = async (data: Bylaw) => {
     const dataToSend = { ...data };
