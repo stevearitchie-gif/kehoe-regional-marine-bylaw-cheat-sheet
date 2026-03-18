@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState } from 'react';
@@ -21,7 +20,7 @@ export function BylawManager({ initialRecords }: BylawManagerProps) {
 
   const handleRecordUpdate = (updatedRecord: Bylaw) => {
     setRecords((prevRecords) =>
-      prevRecords.map((r) => (r.id === updatedRecord.id ? updatedRecord : r))
+      prevRecords.map((r) => (r.id === updatedRecord.id ? updatedRecord : r)).sort((a, b) => a.municipality.localeCompare(b.municipality))
     );
   };
 

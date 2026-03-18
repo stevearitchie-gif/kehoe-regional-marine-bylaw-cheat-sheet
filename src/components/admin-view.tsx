@@ -1,4 +1,3 @@
-
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { DashboardView } from '@/components/dashboard-view';
 import { RecordsView } from '@/components/records-view';

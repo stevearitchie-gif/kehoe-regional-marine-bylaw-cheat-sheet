@@ -1,7 +1,5 @@
-
 'use server';
 
-import { revalidatePath } from 'next/cache';
 import { collection, addDoc, deleteDoc, doc, getDocs, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import type { Bylaw, BylawData } from '@/lib/types';
@@ -34,6 +32,7 @@ export async function addBylawRecord(data: BylawData): Promise<{ success: boolea
 
     return { success: true, message: "Record added successfully.", record: newRecord };
   } catch (error) {
+    console.error("Failed to add record:", error);
     return { success: false, message: "Failed to add record." };
   }
 }
@@ -71,6 +70,7 @@ export async function deleteBylawRecord(id: string): Promise<{ success: boolean;
     await deleteDoc(doc(db, "municipalities", id));
     return { success: true, message: "Record deleted successfully." };
   } catch (error) {
+    console.error("Failed to delete record:", error);
     return { success: false, message: "Failed to delete record." };
   }
 }
@@ -96,7 +96,7 @@ export async function updateBylawRecord(
       permitRule: data.permitRequirements ?? "",
       sourceStatus: data.status ?? "Needs review",
       lastVerified: data.lastVerified ?? "",
-notes: data.notes ?? "",
+      notes: data.notes ?? "",
     });
 
     const updatedRecord: Bylaw = {
@@ -106,6 +106,7 @@ notes: data.notes ?? "",
 
     return { success: true, message: "Record updated successfully.", record: updatedRecord };
   } catch (error) {
+    console.error("Failed to update record:", error);
     return { success: false, message: "Failed to update record." };
   }
 }

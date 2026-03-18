@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState } from 'react';
@@ -27,7 +26,7 @@ export function DataExtractorView({ onRecordAdd }: { onRecordAdd: (record: Bylaw
   const [file, setFile] = useState<File | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isSheetOpen, setSheetOpen] = useState(false);
-  const [extractedRecord, setExtractedRecord] = useState<Bylaw | null>(null);
+  const [extractedRecord, setExtractedRecord] = useState<Partial<Bylaw> | null>(null);
   const { toast } = useToast();
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -54,7 +53,7 @@ export function DataExtractorView({ onRecordAdd }: { onRecordAdd: (record: Bylaw
         lastVerified: new Date().toISOString().split('T')[0],
       };
 
-      setExtractedRecord(newRecord as Bylaw);
+      setExtractedRecord(newRecord);
       setSheetOpen(true);
 
       toast({ title: 'Extraction Complete', description: 'Review the extracted data and save the new record.' });

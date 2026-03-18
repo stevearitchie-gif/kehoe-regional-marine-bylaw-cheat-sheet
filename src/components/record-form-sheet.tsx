@@ -1,4 +1,3 @@
-
 'use client';
 
 import {
@@ -27,7 +26,7 @@ import { ScrollArea } from './ui/scroll-area';
 type RecordFormSheetProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  record: Bylaw | null;
+  record: Bylaw | Partial<Bylaw> | null;
   onSaveSuccess: (record: Bylaw) => void;
 };
 
@@ -37,7 +36,7 @@ export function RecordFormSheet({ open, onOpenChange, record, onSaveSuccess }: R
   const { toast } = useToast();
   const form = useForm<Bylaw>({
     resolver: zodResolver(bylawSchema),
-    defaultValues: record || {
+    defaultValues: record ?? {
       id: '',
       municipality: '',
       region: '',
@@ -60,7 +59,7 @@ export function RecordFormSheet({ open, onOpenChange, record, onSaveSuccess }: R
 
   useEffect(() => {
     if (open) {
-      form.reset(record || {
+      form.reset(record ?? {
         id: '',
         municipality: '',
         region: '',
@@ -83,10 +82,11 @@ export function RecordFormSheet({ open, onOpenChange, record, onSaveSuccess }: R
   }, [record, open, form.reset]);
 
   const onSubmit = async (data: Bylaw) => {
+    const isEditing = record && record.id;
     const { id, ...bylawData } = data;
 
-    const result = record
-      ? await updateBylawRecord(record.id, bylawData)
+    const result = isEditing
+      ? await updateBylawRecord(record.id!, bylawData)
       : await addBylawRecord(bylawData);
 
     if (result.success && result.record) {
@@ -141,9 +141,9 @@ export function RecordFormSheet({ open, onOpenChange, record, onSaveSuccess }: R
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="sm:max-w-xl w-full flex flex-col">
         <SheetHeader>
-          <SheetTitle>{record ? 'Edit Record' : 'Add New Record'}</SheetTitle>
+          <SheetTitle>{record && record.id ? 'Edit Record' : 'Add New Record'}</SheetTitle>
           <SheetDescription>
-            {record ? `Editing the bylaw record for ${record.municipality}.` : 'Add a new bylaw record to the system.'}
+            {record && record.id ? `Editing the bylaw record for ${record.municipality}.` : 'Add a new bylaw record to the system.'}
           </SheetDescription>
         </SheetHeader>
         <ScrollArea className="flex-grow pr-6 -mr-6">
