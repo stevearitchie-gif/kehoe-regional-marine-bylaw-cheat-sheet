@@ -1,7 +1,7 @@
+
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -23,13 +23,12 @@ const fileToDataUri = (file: File): Promise<string> => {
   });
 };
 
-export function DataExtractorView() {
+export function DataExtractorView({ onRecordAdd }: { onRecordAdd: (record: Bylaw) => void }) {
   const [file, setFile] = useState<File | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isSheetOpen, setSheetOpen] = useState(false);
   const [extractedRecord, setExtractedRecord] = useState<Bylaw | null>(null);
   const { toast } = useToast();
-  const router = useRouter();
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
@@ -67,12 +66,15 @@ export function DataExtractorView() {
     }
   };
 
+  const handleSaveSuccess = (record: Bylaw) => {
+    onRecordAdd(record);
+  };
+
   const handleSheetOpenChange = (open: boolean) => {
     setSheetOpen(open);
     if (!open) {
       setExtractedRecord(null);
       setFile(null);
-      router.refresh();
     }
   };
   
@@ -117,6 +119,7 @@ export function DataExtractorView() {
             open={isSheetOpen}
             onOpenChange={handleSheetOpenChange}
             record={extractedRecord}
+            onSaveSuccess={handleSaveSuccess}
         />
       </CardContent>
     </Card>

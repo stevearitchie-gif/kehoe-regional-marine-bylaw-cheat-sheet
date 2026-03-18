@@ -6,9 +6,9 @@ import { collection, addDoc, deleteDoc, doc, getDocs, updateDoc } from "firebase
 import { db } from "@/lib/firebase";
 import type { Bylaw, BylawData } from '@/lib/types';
 
-export async function addBylawRecord(data: BylawData): Promise<{ success: boolean; message: string }> {
+export async function addBylawRecord(data: BylawData): Promise<{ success: boolean; message: string, record?: Bylaw }> {
   try {
-    await addDoc(collection(db, "municipalities"), {
+    const docRef = await addDoc(collection(db, "municipalities"), {
       municipality: data.municipality,
       region: data.region,
       contactName: data.contactName ?? "",
@@ -27,7 +27,12 @@ export async function addBylawRecord(data: BylawData): Promise<{ success: boolea
       notes: data.notes ?? "",
     });
 
-    return { success: true, message: "Record added successfully." };
+    const newRecord: Bylaw = {
+      id: docRef.id,
+      ...data,
+    };
+
+    return { success: true, message: "Record added successfully.", record: newRecord };
   } catch (error) {
     return { success: false, message: "Failed to add record." };
   }
@@ -73,7 +78,7 @@ export async function deleteBylawRecord(id: string): Promise<{ success: boolean;
 export async function updateBylawRecord(
   id: string,
   data: BylawData
-): Promise<{ success: boolean; message: string }> {
+): Promise<{ success: boolean; message: string; record?: Bylaw }> {
   try {
     await updateDoc(doc(db, "municipalities", id), {
       municipality: data.municipality,
@@ -91,10 +96,15 @@ export async function updateBylawRecord(
       permitRule: data.permitRequirements ?? "",
       sourceStatus: data.status ?? "Needs review",
       lastVerified: data.lastVerified ?? "",
-      notes: data.notes ?? "",
+notes: data.notes ?? "",
     });
 
-    return { success: true, message: "Record updated successfully." };
+    const updatedRecord: Bylaw = {
+      id: id,
+      ...data,
+    };
+
+    return { success: true, message: "Record updated successfully.", record: updatedRecord };
   } catch (error) {
     return { success: false, message: "Failed to update record." };
   }

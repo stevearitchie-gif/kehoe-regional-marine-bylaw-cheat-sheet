@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -27,11 +28,12 @@ type RecordFormSheetProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   record: Bylaw | null;
+  onSaveSuccess: (record: Bylaw) => void;
 };
 
 const statusOptions: BylawStatus[] = ['Verified', 'Needs review', 'Missing fields', 'Needs source link'];
 
-export function RecordFormSheet({ open, onOpenChange, record }: RecordFormSheetProps) {
+export function RecordFormSheet({ open, onOpenChange, record, onSaveSuccess }: RecordFormSheetProps) {
   const { toast } = useToast();
   const form = useForm<Bylaw>({
     resolver: zodResolver(bylawSchema),
@@ -81,16 +83,15 @@ export function RecordFormSheet({ open, onOpenChange, record }: RecordFormSheetP
   }, [record, open, form.reset]);
 
   const onSubmit = async (data: Bylaw) => {
-    const dataToSend = { ...data };
-    // remove id from data for both add and update
-    const { id, ...bylawData } = dataToSend;
+    const { id, ...bylawData } = data;
 
     const result = record
       ? await updateBylawRecord(record.id, bylawData)
       : await addBylawRecord(bylawData);
 
-    if (result.success) {
+    if (result.success && result.record) {
       toast({ title: 'Success', description: result.message });
+      onSaveSuccess(result.record);
       onOpenChange(false);
     } else {
       toast({ variant: 'destructive', title: 'Error', description: result.message });

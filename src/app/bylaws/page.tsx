@@ -1,10 +1,8 @@
 
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { FieldView } from '@/components/field-view';
-import { AdminView } from '@/components/admin-view';
-import { Building, Users } from 'lucide-react';
+import { Building } from 'lucide-react';
 import { getBylawRecords } from '@/app/actions';
 import type { Bylaw } from '@/lib/types';
+import { BylawManager } from '@/components/bylaw-manager';
 
 export default async function BylawsPage() {
   const records: Bylaw[] = await getBylawRecords();
@@ -25,24 +23,7 @@ export default async function BylawsPage() {
       </header>
 
       <main className="flex-grow container mx-auto px-4 py-6 md:px-8">
-        <Tabs defaultValue="field" className="flex flex-col h-full">
-          <TabsList className="grid w-full grid-cols-2 md:w-[400px] mb-4">
-            <TabsTrigger value="field">
-              <Users className="mr-2" />
-              Field View
-            </TabsTrigger>
-            <TabsTrigger value="admin">
-              <Building className="mr-2" />
-              Admin
-            </TabsTrigger>
-          </TabsList>
-          <TabsContent value="field" className="flex-grow">
-            <FieldView records={records} />
-          </TabsContent>
-          <TabsContent value="admin" className="flex-grow">
-            <AdminView records={records} />
-          </TabsContent>
-        </Tabs>
+        <BylawManager initialRecords={records} />
       </main>
     </div>
   );

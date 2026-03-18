@@ -6,7 +6,14 @@ import { DataExtractorView } from '@/components/data-extractor-view';
 import { LayoutDashboard, List, Wand2 } from 'lucide-react';
 import type { Bylaw } from '@/lib/types';
 
-export function AdminView({ records }: { records: Bylaw[] }) {
+type AdminViewProps = {
+  records: Bylaw[];
+  onRecordAdd: (record: Bylaw) => void;
+  onRecordUpdate: (record: Bylaw) => void;
+  onRecordDelete: (id: string) => void;
+};
+
+export function AdminView({ records, onRecordAdd, onRecordUpdate, onRecordDelete }: AdminViewProps) {
   return (
     <Tabs defaultValue="dashboard" className="flex flex-col h-full">
       <TabsList className="mb-4">
@@ -27,10 +34,15 @@ export function AdminView({ records }: { records: Bylaw[] }) {
         <DashboardView records={records} />
       </TabsContent>
       <TabsContent value="records" className="flex-grow">
-        <RecordsView records={records} />
+        <RecordsView 
+          records={records}
+          onRecordAdd={onRecordAdd}
+          onRecordUpdate={onRecordUpdate}
+          onRecordDelete={onRecordDelete}
+        />
       </TabsContent>
       <TabsContent value="extractor" className="flex-grow">
-        <DataExtractorView />
+        <DataExtractorView onRecordAdd={onRecordAdd} />
       </TabsContent>
     </Tabs>
   );

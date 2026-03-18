@@ -1,7 +1,7 @@
+
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import {
   Table,
   TableBody,
@@ -29,13 +29,22 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 
-export function RecordsView({ records }: { records: Bylaw[] }) {
+export function RecordsView({
+  records,
+  onRecordAdd,
+  onRecordUpdate,
+  onRecordDelete,
+}: {
+  records: Bylaw[];
+  onRecordAdd: (record: Bylaw) => void;
+  onRecordUpdate: (record: Bylaw) => void;
+  onRecordDelete: (id: string) => void;
+}) {
   const [isSheetOpen, setSheetOpen] = useState(false);
   const [editingRecord, setEditingRecord] = useState<Bylaw | null>(null);
   const [recordToDelete, setRecordToDelete] = useState<Bylaw | null>(null);
   const [isAlertOpen, setAlertOpen] = useState(false);
   const { toast } = useToast();
-  const router = useRouter();
 
   const handleAdd = () => {
     setEditingRecord(null);
@@ -60,7 +69,7 @@ export function RecordsView({ records }: { records: Bylaw[] }) {
 
     if (result.success) {
       toast({ title: 'Success', description: result.message });
-      router.refresh();
+      onRecordDelete(recordToDelete.id);
     } else {
       toast({ variant: 'destructive', title: 'Error', description: result.message });
     }
@@ -71,7 +80,14 @@ export function RecordsView({ records }: { records: Bylaw[] }) {
     setSheetOpen(open);
     if (!open) {
       setEditingRecord(null);
-      router.refresh();
+    }
+  };
+
+  const handleSaveSuccess = (savedRecord: Bylaw) => {
+    if (editingRecord) {
+      onRecordUpdate(savedRecord);
+    } else {
+      onRecordAdd(savedRecord);
     }
   };
 
@@ -131,6 +147,7 @@ export function RecordsView({ records }: { records: Bylaw[] }) {
         open={isSheetOpen}
         onOpenChange={handleSheetOpenChange}
         record={editingRecord}
+        onSaveSuccess={handleSaveSuccess}
       />
       <AlertDialog open={isAlertOpen} onOpenChange={setAlertOpen}>
         <AlertDialogContent>
