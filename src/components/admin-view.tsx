@@ -27,7 +27,7 @@ export function AdminView({ records }: { records: Bylaw[] }) {
         <DashboardView records={records} />
       </TabsContent>
       <TabsContent value="records" className="flex-grow">
-        <RecordsView initialRecords={records} />
+        <RecordsView records={records} />
       </TabsContent>
       <TabsContent value="extractor" className="flex-grow">
         <DataExtractorView />

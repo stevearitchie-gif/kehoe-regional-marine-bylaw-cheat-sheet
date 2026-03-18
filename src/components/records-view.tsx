@@ -29,7 +29,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 
-export function RecordsView({ initialRecords }: { initialRecords: Bylaw[] }) {
+export function RecordsView({ records }: { records: Bylaw[] }) {
   const [isSheetOpen, setSheetOpen] = useState(false);
   const [editingRecord, setEditingRecord] = useState<Bylaw | null>(null);
   const [recordToDelete, setRecordToDelete] = useState<Bylaw | null>(null);
@@ -90,7 +90,7 @@ export function RecordsView({ initialRecords }: { initialRecords: Bylaw[] }) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {initialRecords.map((record) => (
+            {records.map((record) => (
               <TableRow key={record.id}>
                 <TableCell className="font-medium">{record.municipality}</TableCell>
                 <TableCell>{record.region}</TableCell>

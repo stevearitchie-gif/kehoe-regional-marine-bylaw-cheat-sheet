@@ -79,7 +79,7 @@ export function RecordFormSheet({ open, onOpenChange, record, onSuccess }: Recor
         notes: '',
       });
     }
-  }, [record, open, form]);
+  }, [record, open]);
 
   const onSubmit = async (data: Bylaw) => {
     const dataToSend = { ...data };
@@ -95,7 +95,6 @@ export function RecordFormSheet({ open, onOpenChange, record, onSuccess }: Recor
       onSuccess();
     } else {
       toast({ variant: 'destructive', title: 'Error', description: result.message });
-      onSuccess();
     }
   };
 
