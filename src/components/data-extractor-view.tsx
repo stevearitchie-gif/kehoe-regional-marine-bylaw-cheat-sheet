@@ -67,13 +67,12 @@ export function DataExtractorView() {
     }
   };
 
-  const handleFormSuccess = (success: boolean) => {
-    if (success) {
-      setSheetOpen(false);
+  const handleSheetOpenChange = (open: boolean) => {
+    setSheetOpen(open);
+    if (!open) {
       setExtractedRecord(null);
       setFile(null);
-      // Delay refresh to allow sheet to close and prevent race conditions.
-      setTimeout(() => router.refresh(), 100);
+      router.refresh();
     }
   };
   
@@ -116,9 +115,8 @@ export function DataExtractorView() {
         
         <RecordFormSheet
             open={isSheetOpen}
-            onOpenChange={setSheetOpen}
+            onOpenChange={handleSheetOpenChange}
             record={extractedRecord}
-            onSuccess={handleFormSuccess}
         />
       </CardContent>
     </Card>

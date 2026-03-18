@@ -55,25 +55,23 @@ export function RecordsView({ records }: { records: Bylaw[] }) {
   const confirmDelete = async () => {
     if (!recordToDelete) return;
 
+    const result = await deleteBylawRecord(recordToDelete.id);
     setAlertOpen(false);
-    const { success, message } = await deleteBylawRecord(recordToDelete.id);
-    
-    if (success) {
-      toast({ title: 'Success', description: message });
-      // Delay refresh to allow dialog to close and prevent race conditions.
-      setTimeout(() => router.refresh(), 100);
+
+    if (result.success) {
+      toast({ title: 'Success', description: result.message });
+      router.refresh();
     } else {
-      toast({ variant: 'destructive', title: 'Error', description: message });
+      toast({ variant: 'destructive', title: 'Error', description: result.message });
     }
     setRecordToDelete(null);
   };
 
-  const handleFormSuccess = (success: boolean) => {
-    if (success) {
-        setSheetOpen(false);
-        setEditingRecord(null);
-        // Delay refresh to allow sheet to close and prevent race conditions.
-        setTimeout(() => router.refresh(), 100);
+  const handleSheetOpenChange = (open: boolean) => {
+    setSheetOpen(open);
+    if (!open) {
+      setEditingRecord(null);
+      router.refresh();
     }
   };
 
@@ -131,9 +129,8 @@ export function RecordsView({ records }: { records: Bylaw[] }) {
       </div>
       <RecordFormSheet
         open={isSheetOpen}
-        onOpenChange={setSheetOpen}
+        onOpenChange={handleSheetOpenChange}
         record={editingRecord}
-        onSuccess={handleFormSuccess}
       />
       <AlertDialog open={isAlertOpen} onOpenChange={setAlertOpen}>
         <AlertDialogContent>

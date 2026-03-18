@@ -27,12 +27,11 @@ type RecordFormSheetProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   record: Bylaw | null;
-  onSuccess: (success: boolean) => void;
 };
 
 const statusOptions: BylawStatus[] = ['Verified', 'Needs review', 'Missing fields', 'Needs source link'];
 
-export function RecordFormSheet({ open, onOpenChange, record, onSuccess }: RecordFormSheetProps) {
+export function RecordFormSheet({ open, onOpenChange, record }: RecordFormSheetProps) {
   const { toast } = useToast();
   const form = useForm<Bylaw>({
     resolver: zodResolver(bylawSchema),
@@ -92,10 +91,9 @@ export function RecordFormSheet({ open, onOpenChange, record, onSuccess }: Recor
 
     if (result.success) {
       toast({ title: 'Success', description: result.message });
-      onSuccess(true);
+      onOpenChange(false);
     } else {
       toast({ variant: 'destructive', title: 'Error', description: result.message });
-      onSuccess(false);
     }
   };
 
