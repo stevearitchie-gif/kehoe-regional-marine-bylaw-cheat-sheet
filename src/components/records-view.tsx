@@ -26,7 +26,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { useToast } from '@/hooks/use-toast';
-import { addBylawRecord, updateBylawRecord, deleteBylawRecord } from '@/app/actions';
+import { addDoc, collection, deleteDoc, doc, getDocs, updateDoc } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 
 type RecordsViewProps = {
   records: Bylaw[];
@@ -64,21 +65,43 @@ export function RecordsView({
   };
   
   const handleSave = async (data: BylawData, id?: string) => {
-    const isEditing = !!id;
-    const result = isEditing
-      ? await updateBylawRecord(id, data)
-      : await addBylawRecord(data);
-
-    if (result.success && result.record) {
-      toast({ title: 'Success', description: result.message });
-      if (isEditing) {
-        onRecordUpdate(result.record);
+    try {
+      const firestorePayload = {
+        municipality: data.municipality,
+        region: data.region,
+        contactName: data.contactName ?? "",
+        contactMethod: data.contactMethod ?? "",
+        conservationAuthority: data.conservationAuthority ?? "",
+        areaRule: data.areaRegulation ?? "",
+        perimeterRule: data.perimeterRegulation ?? "",
+        widthRule: data.widthRegulation ?? "",
+        lengthRule: data.lengthRegulation ?? "",
+        sideLotSetback: data.sideLotSetback ?? "",
+        lotLineProjection: data.lotLineProjection ?? "",
+        heightRule: data.heightLimit ?? "",
+        permitRule: data.permitRequirements ?? "",
+        sourceStatus: data.status ?? "Needs review",
+        lastVerified: data.lastVerified ?? "",
+        notes: data.notes ?? "",
+      };
+  
+      if (id) {
+        await updateDoc(doc(db, "municipalities", id), firestorePayload);
+        onRecordUpdate({ ...data, id });
+        toast({ title: "Success", description: "Record updated successfully." });
       } else {
-        onRecordAdd(result.record);
+        const docRef = await addDoc(collection(db, "municipalities"), firestorePayload);
+        onRecordAdd({ ...data, id: docRef.id });
+        toast({ title: "Success", description: "Record added successfully." });
       }
+  
       handleCloseDialog();
-    } else {
-      toast({ variant: 'destructive', title: 'Error', description: result.message });
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to save record.",
+      });
     }
   };
 
@@ -94,17 +117,21 @@ export function RecordsView({
 
   const handleConfirmDelete = async () => {
     if (!recordToDelete) return;
-    
-    const result = await deleteBylawRecord(recordToDelete.id);
-
-    if (result.success) {
-      toast({ title: 'Success', description: result.message });
+  
+    try {
+      await deleteDoc(doc(db, "municipalities", recordToDelete.id));
       onRecordDelete(recordToDelete.id);
-    } else {
-      toast({ variant: 'destructive', title: 'Error', description: result.message });
+      toast({ title: "Success", description: "Record deleted successfully." });
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to delete record.",
+      });
     }
-    
-    handleCloseDeleteAlert();
+  
+    setAlertOpen(false);
+    setRecordToDelete(null);
   };
 
   return (

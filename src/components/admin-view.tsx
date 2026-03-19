@@ -1,8 +1,13 @@
+'use client';
+import { useEffect, useState } from 'react';
+import { onAuthStateChanged, signInWithRedirect, signOut } from 'firebase/auth';
+import { auth, googleProvider } from '@/lib/firebase';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { DashboardView } from '@/components/dashboard-view';
 import { RecordsView } from '@/components/records-view';
 import { DataExtractorView } from '@/components/data-extractor-view';
 import { LayoutDashboard, List, Wand2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import type { Bylaw } from '@/lib/types';
 
 type AdminViewProps = {
@@ -18,6 +23,52 @@ export function AdminView({
   onRecordUpdate,
   onRecordDelete
 }: AdminViewProps) {
+  const [user, setUser] = useState<any>(null);
+const [authLoading, setAuthLoading] = useState(true);
+
+useEffect(() => {
+  const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+    setUser(currentUser);
+    setAuthLoading(false);
+  });
+
+  return () => unsubscribe();
+}, []);
+
+const handleGoogleSignIn = async () => {
+  try {
+    await signInWithRedirect(auth, googleProvider);
+  } catch (error) {
+    console.error('Google sign in failed:', error);
+  }
+};
+
+const handleGoogleSignOut = async () => {
+  try {
+    await signOut(auth);
+  } catch (error) {
+    console.error('Google sign out failed:', error);
+  }
+};
+
+if (authLoading) {
+  return <div className="p-4 text-sm text-slate-600">Checking admin access...</div>;
+}
+
+if (!user) {
+  return (
+    <div className="rounded-2xl border p-6">
+      <h3 className="text-lg font-semibold">Admin sign in required</h3>
+      <p className="mt-2 text-sm text-slate-600">
+        Sign in with Google to access the admin dashboard, records, and data extractor.
+      </p>
+      <div className="mt-4">
+        <Button onClick={handleGoogleSignIn}>Sign in with Google</Button>
+      </div>
+    </div>
+  );
+}
+
   return (
     <Tabs defaultValue="dashboard" className="flex flex-col h-full">
       <TabsList className="mb-4">
