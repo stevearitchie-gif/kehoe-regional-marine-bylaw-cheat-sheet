@@ -1,4 +1,3 @@
-
 import { z } from 'zod';
 
 export const bylawSchema = z.object({
@@ -8,6 +7,18 @@ export const bylawSchema = z.object({
   contactName: z.string().optional(),
   contactMethod: z.string().optional(),
   conservationAuthority: z.string().min(1, 'Conservation Authority is required'),
+  conservationAuthorityRules: z.string().optional(),
+  conservationAuthoritySourceLink: z.string().optional(),
+  conservationAuthoritySourceSection: z.string().optional(),
+  parksCanadaApplies: z.boolean().optional(),
+  parksCanadaRules: z.string().optional(),
+  parksCanadaSourceLink: z.string().optional(),
+  parksCanadaSourceSection: z.string().optional(),
+  mnrApplies: z.boolean().optional(),
+  mnrRules: z.string().optional(),
+  mnrSourceLink: z.string().optional(),
+  mnrSourceSection: z.string().optional(),
+  authorityGeneralNotes: z.string().optional(),
   areaRegulation: z.string().optional(),
   perimeterRegulation: z.string().optional(),
   widthRegulation: z.string().optional(),
@@ -16,7 +27,10 @@ export const bylawSchema = z.object({
   lotLineProjection: z.string().optional(),
   heightLimit: z.string().optional(),
   permitRequirements: z.string().optional(),
+  sourceLink: z.string().optional(),
+  sourceSection: z.string().optional(),
   status: z.enum(['Verified', 'Needs review', 'Missing fields', 'Needs source link']),
   lastVerified: z.string().min(1, 'Last verified date is required'),
+  lastSourceCheck: z.string().optional(),
   notes: z.string().optional(),
 });
