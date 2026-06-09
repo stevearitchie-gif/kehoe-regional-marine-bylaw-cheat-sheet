@@ -1,14 +1,15 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { FormEvent, useEffect, useState } from 'react';
 import {
-  onAuthStateChanged,
-  signInWithPopup,
-  signOut,
-  setPersistence,
   browserLocalPersistence,
+  onAuthStateChanged,
+  setPersistence,
+  signInWithEmailAndPassword,
+  signOut,
+  type User,
 } from 'firebase/auth';
-import { auth, googleProvider } from '@/lib/firebase';
+import { auth } from '@/lib/firebase';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { DashboardView } from '@/components/dashboard-view';
 import { RecordsView } from '@/components/records-view';
@@ -30,8 +31,12 @@ export function AdminView({
   onRecordUpdate,
   onRecordDelete,
 }: AdminViewProps) {
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [signInError, setSignInError] = useState('');
+  const [signingIn, setSigningIn] = useState(false);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -42,20 +47,28 @@ export function AdminView({
     return () => unsubscribe();
   }, []);
 
-  const handleGoogleSignIn = async () => {
+  const handleEmailSignIn = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setSignInError('');
+    setSigningIn(true);
+
     try {
       await setPersistence(auth, browserLocalPersistence);
-      await signInWithPopup(auth, googleProvider);
+      await signInWithEmailAndPassword(auth, email.trim(), password);
+      setPassword('');
     } catch (error) {
-      console.error('Google popup sign in failed:', error);
+      console.error('Email sign in failed:', error);
+      setSignInError('Sign in failed. Check the email and password, then try again.');
+    } finally {
+      setSigningIn(false);
     }
   };
 
-  const handleGoogleSignOut = async () => {
+  const handleSignOut = async () => {
     try {
       await signOut(auth);
     } catch (error) {
-      console.error('Google sign out failed:', error);
+      console.error('Sign out failed:', error);
     }
   };
 
@@ -68,19 +81,61 @@ export function AdminView({
       <div className="rounded-2xl border p-6">
         <h3 className="text-lg font-semibold">Admin sign in required</h3>
         <p className="mt-2 text-sm text-slate-600">
-          Sign in with Google to access the admin dashboard, records, and data extractor.
+          Sign in with your authorized admin email and password to access the dashboard, records, and data extractor.
         </p>
-        <div className="mt-4">
-          <Button onClick={handleGoogleSignIn}>Sign in with Google</Button>
-        </div>
+
+        <form onSubmit={handleEmailSignIn} className="mt-4 max-w-sm space-y-4">
+          <div>
+            <label htmlFor="admin-email" className="block text-sm font-medium text-slate-700">
+              Email
+            </label>
+            <input
+              id="admin-email"
+              type="email"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              autoComplete="email"
+              required
+              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="admin-password" className="block text-sm font-medium text-slate-700">
+              Password
+            </label>
+            <input
+              id="admin-password"
+              type="password"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              autoComplete="current-password"
+              required
+              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
+            />
+          </div>
+
+          {signInError ? (
+            <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
+              {signInError}
+            </p>
+          ) : null}
+
+          <Button type="submit" disabled={signingIn}>
+            {signingIn ? 'Signing in...' : 'Sign in'}
+          </Button>
+        </form>
       </div>
     );
   }
 
   return (
     <div className="flex flex-col h-full">
-      <div className="mb-4 flex justify-end">
-        <Button variant="outline" onClick={handleGoogleSignOut}>
+      <div className="mb-4 flex items-center justify-between">
+        <p className="text-sm text-slate-600">
+          Signed in as {user.email}
+        </p>
+        <Button variant="outline" onClick={handleSignOut}>
           Sign out
         </Button>
       </div>
