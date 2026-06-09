@@ -1,6 +1,12 @@
 import {createHash} from "node:crypto";
 import {initializeApp} from "firebase-admin/app";
-import {FieldValue, getFirestore} from "firebase-admin/firestore";
+import {
+  DocumentData,
+  FieldValue,
+  Firestore,
+  getFirestore,
+  QueryDocumentSnapshot,
+} from "firebase-admin/firestore";
 import * as logger from "firebase-functions/logger";
 import {setGlobalOptions} from "firebase-functions/v2";
 import {onSchedule} from "firebase-functions/v2/scheduler";
@@ -168,22 +174,190 @@ export const monthlySourceRegistryQueueBuild = onSchedule(
     });
   }
 );
+
+type ProbeResult = {
+  municipalityId: string;
+  municipality: string;
+  region: string;
+  sourceLink: string;
+  status: string;
+  httpStatus?: number;
+  changeDetected?: boolean;
+  errorMessage?: string;
+};
+
+const sourceMonitorBatchSize = 100;
+
+const probeSourceCandidate = async (
+  db: Firestore,
+  candidateDoc: QueryDocumentSnapshot<DocumentData>,
+  nowIso: string
+): Promise<ProbeResult> => {
+  const candidate = candidateDoc.data();
+
+  const municipalityId = String(candidate.municipalityId ?? "").trim();
+  const municipality = String(candidate.municipality ?? "").trim();
+  const region = String(candidate.region ?? "").trim();
+  const sourceLink = String(candidate.sourceLink ?? "").trim();
+  const sourceSection = String(candidate.sourceSection ?? "").trim();
+  const previousHash = String(candidate.lastContentHash ?? "").trim();
+
+  if (!sourceLink) {
+    await candidateDoc.ref.set({
+      monitorStatus: "missing-source-link",
+      lastCheckedAt: FieldValue.serverTimestamp(),
+      lastCheckedAtIso: nowIso,
+      lastCheckStatus: "missing-source-link",
+    }, {merge: true});
+
+    return {
+      municipalityId,
+      municipality,
+      region,
+      sourceLink,
+      status: "missing-source-link",
+    };
+  }
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 20000);
+
+  try {
+    const response = await fetch(sourceLink, {
+      redirect: "follow",
+      signal: controller.signal,
+      headers: {
+        "user-agent": "By-Law Marine Construction Source Monitor/1.0",
+      },
+    });
+
+    const finalUrl = response.url || sourceLink;
+    const httpStatus = response.status;
+    const contentType = response.headers.get("content-type") ?? "";
+    const rawBody = await response.text();
+    const normalizedBody = normalizeSourceBody(rawBody, contentType);
+    const contentHash = createHash("sha256")
+      .update(normalizedBody)
+      .digest("hex");
+
+    const changeDetected =
+      Boolean(previousHash) && previousHash !== contentHash;
+    const checkStatus = response.ok ? "fetched" : "http-error";
+
+    await db.collection("sourceMonitorChecks").add({
+      municipalityId,
+      municipality,
+      region,
+      sourceLink,
+      finalUrl,
+      sourceSection,
+      checkedAt: FieldValue.serverTimestamp(),
+      checkedAtIso: nowIso,
+      httpStatus,
+      contentType,
+      contentHash,
+      previousHash,
+      changeDetected,
+      sampleText: normalizedBody.slice(0, 500),
+      status: checkStatus,
+    });
+
+    if (changeDetected) {
+      await db.collection("sourceMonitorChanges").add({
+        municipalityId,
+        municipality,
+        region,
+        sourceLink,
+        finalUrl,
+        sourceSection,
+        detectedAt: FieldValue.serverTimestamp(),
+        detectedAtIso: nowIso,
+        previousHash,
+        newHash: contentHash,
+        status: "review-required",
+        sampleText: normalizedBody.slice(0, 1000),
+      });
+    }
+
+    await candidateDoc.ref.set({
+      monitorStatus: "ready",
+      lastCheckedAt: FieldValue.serverTimestamp(),
+      lastCheckedAtIso: nowIso,
+      lastCheckedSourceLink: finalUrl,
+      lastHttpStatus: httpStatus,
+      lastContentType: contentType,
+      lastContentHash: contentHash,
+      lastCheckStatus: checkStatus,
+      lastChangeDetected: changeDetected,
+    }, {merge: true});
+
+    await db.collection("municipalities").doc(municipalityId).set({
+      lastSourceCheck: nowIso,
+    }, {merge: true});
+
+    return {
+      municipalityId,
+      municipality,
+      region,
+      sourceLink,
+      status: response.ok ? "ok" : "http-error",
+      httpStatus,
+      changeDetected,
+    };
+  } catch (error) {
+    const errorMessage =
+      error instanceof Error ? error.message : String(error);
+
+    await db.collection("sourceMonitorChecks").add({
+      municipalityId,
+      municipality,
+      region,
+      sourceLink,
+      sourceSection,
+      checkedAt: FieldValue.serverTimestamp(),
+      checkedAtIso: nowIso,
+      status: "fetch-failed",
+      errorMessage,
+    });
+
+    await candidateDoc.ref.set({
+      monitorStatus: "ready",
+      lastCheckedAt: FieldValue.serverTimestamp(),
+      lastCheckedAtIso: nowIso,
+      lastCheckStatus: "fetch-failed",
+      lastErrorMessage: errorMessage,
+    }, {merge: true});
+
+    return {
+      municipalityId,
+      municipality,
+      region,
+      sourceLink,
+      status: "fetch-failed",
+      errorMessage,
+    };
+  } finally {
+    clearTimeout(timeout);
+  }
+};
+
 export const monthlySourceCandidateProbe = onSchedule(
   {
     schedule: "15 6 1 * *",
     timeZone: "America/Toronto",
+    timeoutSeconds: 540,
+    memory: "512MiB",
   },
   async () => {
     const db = getFirestore();
     const nowIso = new Date().toISOString();
+    const runRef = db.collection("sourceMonitorRuns").doc();
 
     const candidatesSnapshot = await db
       .collection("sourceMonitorCandidates")
       .where("monitorStatus", "==", "ready")
-      .limit(10)
+      .limit(sourceMonitorBatchSize)
       .get();
-
-    const runRef = db.collection("sourceMonitorRuns").doc();
 
     if (candidatesSnapshot.empty) {
       await runRef.set({
@@ -191,6 +365,7 @@ export const monthlySourceCandidateProbe = onSchedule(
         status: "no-candidates",
         ranAt: FieldValue.serverTimestamp(),
         ranAtIso: nowIso,
+        checkedCount: 0,
         message: "No ready source monitor candidates were found.",
       });
 
@@ -202,193 +377,69 @@ export const monthlySourceCandidateProbe = onSchedule(
       return;
     }
 
-    const candidateDoc = candidatesSnapshot.docs[0];
-    const candidate = candidateDoc.data();
+    const results: ProbeResult[] = [];
 
-    const municipalityId = String(candidate.municipalityId ?? "").trim();
-    const municipality = String(candidate.municipality ?? "").trim();
-    const region = String(candidate.region ?? "").trim();
-    const sourceLink = String(candidate.sourceLink ?? "").trim();
-    const sourceSection = String(candidate.sourceSection ?? "").trim();
-    const previousHash = String(candidate.lastContentHash ?? "").trim();
+    for (const candidateDoc of candidatesSnapshot.docs) {
+      const result = await probeSourceCandidate(db, candidateDoc, nowIso);
+      results.push(result);
 
-    if (!sourceLink) {
-      await candidateDoc.ref.set({
-        monitorStatus: "missing-source-link",
-        lastCheckedAt: FieldValue.serverTimestamp(),
-        lastCheckedAtIso: nowIso,
-      }, {merge: true});
-
-      await runRef.set({
-        type: "monthly-candidate-probe",
-        status: "missing-source-link",
-        ranAt: FieldValue.serverTimestamp(),
-        ranAtIso: nowIso,
-        municipalityId,
-        municipality,
-        region,
-        message: "Candidate was selected but sourceLink was empty.",
-      });
-
-      logger.info("monthlySourceCandidateProbe found empty sourceLink", {
-        runId: runRef.id,
-        municipalityId,
-        municipality,
-        region,
-        ranAtIso: nowIso,
-      });
-
-      return;
-    }
-
-    try {
-      const response = await fetch(sourceLink, {
-        redirect: "follow",
-        headers: {
-          "user-agent": "By-Law Marine Construction Source Monitor/1.0",
-        },
-      });
-
-      const finalUrl = response.url || sourceLink;
-      const httpStatus = response.status;
-      const contentType = response.headers.get("content-type") ?? "";
-      const rawBody = await response.text();
-      const normalizedBody = normalizeSourceBody(rawBody, contentType);
-      const contentHash = createHash("sha256")
-        .update(normalizedBody)
-        .digest("hex");
-
-      const changeDetected =
-        Boolean(previousHash) && previousHash !== contentHash;
-      const probeStatus = response.ok ? "fetched" : "http-error";
-
-      await db.collection("sourceMonitorChecks").add({
-        municipalityId,
-        municipality,
-        region,
-        sourceLink,
-        finalUrl,
-        sourceSection,
-        checkedAt: FieldValue.serverTimestamp(),
-        checkedAtIso: nowIso,
-        httpStatus,
-        contentType,
-        contentHash,
-        previousHash,
-        changeDetected,
-        sampleText: normalizedBody.slice(0, 500),
-        status: probeStatus,
-      });
-
-      if (changeDetected) {
-        await db.collection("sourceMonitorChanges").add({
-          municipalityId,
-          municipality,
-          region,
-          sourceLink,
-          finalUrl,
-          sourceSection,
-          detectedAt: FieldValue.serverTimestamp(),
-          detectedAtIso: nowIso,
-          previousHash,
-          newHash: contentHash,
-          status: "review-required",
-          sampleText: normalizedBody.slice(0, 1000),
-        });
-      }
-
-      await candidateDoc.ref.set({
-        lastCheckedAt: FieldValue.serverTimestamp(),
-        lastCheckedAtIso: nowIso,
-        lastCheckedSourceLink: finalUrl,
-        lastHttpStatus: httpStatus,
-        lastContentType: contentType,
-        lastContentHash: contentHash,
-        lastCheckStatus: probeStatus,
-        lastChangeDetected: changeDetected,
-      }, {merge: true});
-      await db.collection("municipalities").doc(municipalityId).set({
-        lastSourceCheck: nowIso,
-      }, {merge: true});
-
-      await runRef.set({
-        type: "monthly-candidate-probe",
-        status: response.ok ? "ok" : "http-error",
-        ranAt: FieldValue.serverTimestamp(),
-        ranAtIso: nowIso,
-        municipalityId,
-        municipality,
-        region,
-        sourceLink,
-        finalUrl,
-        httpStatus,
-        contentType,
-        previousHash,
-        contentHash,
-        changeDetected,
-        message: "Monthly source candidate probe completed.",
-      });
-
-      logger.info("monthlySourceCandidateProbe completed", {
-        runId: runRef.id,
-        municipalityId,
-        municipality,
-        region,
-        sourceLink,
-        finalUrl,
-        httpStatus,
-        contentType,
-        previousHash,
-        contentHash,
-        changeDetected,
-        ranAtIso: nowIso,
-      });
-    } catch (error) {
-      const errorMessage =
-          error instanceof Error ? error.message : String(error);
-
-      await db.collection("sourceMonitorChecks").add({
-        municipalityId,
-        municipality,
-        region,
-        sourceLink,
-        sourceSection,
-        checkedAt: FieldValue.serverTimestamp(),
-        checkedAtIso: nowIso,
-        status: "fetch-failed",
-        errorMessage,
-      });
-
-      await candidateDoc.ref.set({
-        lastCheckedAt: FieldValue.serverTimestamp(),
-        lastCheckedAtIso: nowIso,
-        lastCheckStatus: "fetch-failed",
-        lastErrorMessage: errorMessage,
-      }, {merge: true});
-
-      await runRef.set({
-        type: "monthly-candidate-probe",
-        status: "fetch-failed",
-        ranAt: FieldValue.serverTimestamp(),
-        ranAtIso: nowIso,
-        municipalityId,
-        municipality,
-        region,
-        sourceLink,
-        errorMessage,
-        message: "Monthly source candidate probe failed.",
-      });
-
-      logger.error("monthlySourceCandidateProbe failed", {
-        runId: runRef.id,
-        municipalityId,
-        municipality,
-        region,
-        sourceLink,
-        errorMessage,
-        ranAtIso: nowIso,
+      logger.info("monthlySourceCandidateProbe checked candidate", {
+        municipalityId: result.municipalityId,
+        municipality: result.municipality,
+        region: result.region,
+        status: result.status,
+        httpStatus: result.httpStatus,
+        changeDetected: result.changeDetected,
       });
     }
+
+    const okCount = results.filter((item) => item.status === "ok").length;
+    const httpErrorCount = results.filter(
+      (item) => item.status === "http-error"
+    ).length;
+    const fetchFailedCount = results.filter(
+      (item) => item.status === "fetch-failed"
+    ).length;
+    const missingSourceLinkCount = results.filter(
+      (item) => item.status === "missing-source-link"
+    ).length;
+    const changeDetectedCount = results.filter(
+      (item) => item.changeDetected === true
+    ).length;
+
+    await runRef.set({
+      type: "monthly-candidate-probe",
+      status: "completed",
+      ranAt: FieldValue.serverTimestamp(),
+      ranAtIso: nowIso,
+      checkedCount: results.length,
+      okCount,
+      httpErrorCount,
+      fetchFailedCount,
+      missingSourceLinkCount,
+      changeDetectedCount,
+      batchLimit: sourceMonitorBatchSize,
+      message: "Monthly source candidate probe batch completed.",
+      results: results.map((item) => ({
+        municipalityId: item.municipalityId,
+        municipality: item.municipality,
+        region: item.region,
+        status: item.status,
+        httpStatus: item.httpStatus ?? null,
+        changeDetected: item.changeDetected ?? false,
+        errorMessage: item.errorMessage ?? null,
+      })),
+    });
+
+    logger.info("monthlySourceCandidateProbe batch completed", {
+      runId: runRef.id,
+      checkedCount: results.length,
+      okCount,
+      httpErrorCount,
+      fetchFailedCount,
+      missingSourceLinkCount,
+      changeDetectedCount,
+      ranAtIso: nowIso,
+    });
   }
 );
-
