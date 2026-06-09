@@ -187,6 +187,8 @@ type ProbeResult = {
 };
 
 const sourceMonitorBatchSize = 100;
+const emptyContentHash =
+  "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
 
 const probeSourceCandidate = async (
   db: Firestore,
@@ -240,8 +242,10 @@ const probeSourceCandidate = async (
       .update(normalizedBody)
       .digest("hex");
 
+    const hasUsablePreviousHash =
+      Boolean(previousHash) && previousHash !== emptyContentHash;
     const changeDetected =
-      Boolean(previousHash) && previousHash !== contentHash;
+      hasUsablePreviousHash && previousHash !== contentHash;
     const checkStatus = response.ok ? "fetched" : "http-error";
 
     await db.collection("sourceMonitorChecks").add({
